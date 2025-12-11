@@ -25,7 +25,7 @@ fi
 
 # Flask uygulamasını başlat
 echo "Flask uygulaması başlatılıyor (port 5000)"
-gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
+python3 main.py
 
 # Not: Flask uygulaması kapandıktan sonra API sunucusunu da kapat
 kill $API_PID 2>/dev/null || true
