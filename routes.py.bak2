@@ -1,0 +1,2886 @@
+import json
+import os
+import datetime
+import time
+import requests
+import pytz
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, g
+import io
+from app import app, db
+from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag
+from openai import OpenAI
+from anthropic import Anthropic
+
+# API anahtarlarını ayarla, hata durumunda graceful fallback sağla
+openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# API model isimleri
+CLAUDE_MODEL = "claude-3-5-sonnet-20241022"  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+OPENAI_MODEL = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+
+# Özel API anahtarları (failsafe olarak)
+# NOT: Gerçek bir uygulamada bu kullanılmaz, sadece demo ve test için kullanılır
+OPENAI_FALLBACK_KEY = "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"
+
+# API istemcilerini hazırla, ancak yalnızca API çağrısı yapıldığında kullan
+# Bu şekilde başlangıçta hata vermesini önleriz
+openai = None
+anthropic_client = None
+
+def get_openai_client():
+    """
+    OpenAI API istemcisini döndürür. 
+    Önce çevre değişkenlerinden anahtar kullanılır, yoksa özel anahtar denenebilir.
+    """
+    global openai
+    try:
+        if not openai:
+            # Önce çevre değişkenindeki anahtarı kullan
+            if openai_api_key:
+                openai = OpenAI(api_key=openai_api_key)
+            # Çevre değişkeni yoksa fallback anahtarı dene
+            elif OPENAI_FALLBACK_KEY:
+                openai = OpenAI(api_key=OPENAI_FALLBACK_KEY)
+        return openai
+    except Exception as e:
+        print(f"OpenAI istemcisi oluşturma hatası: {str(e)}")
+        return None
+
+def get_anthropic_client():
+    """
+    Anthropic (Claude) API istemcisini döndürür.
+    Sadece çevre değişkenlerinden anahtar kullanılır.
+    """
+    global anthropic_client
+    try:
+        if not anthropic_client and anthropic_api_key:
+            anthropic_client = Anthropic(api_key=anthropic_api_key)
+        return anthropic_client
+    except Exception as e:
+        print(f"Anthropic istemcisi oluşturma hatası: {str(e)}")
+        return None
+
+def get_perplexity_url(query_text):
+    """
+    Perplexity internet araması için URL oluşturur
+    
+    Args:
+        query_text: Arama sorgusu metni
+        
+    Returns:
+        Perplexity URL'si
+    """
+    # Sorguyu URL uyumlu hale getir
+    import urllib.parse
+    encoded_query = urllib.parse.quote_plus(query_text)
+    
+    # Perplexity arama URL'sini oluştur
+    perplexity_url = f"https://www.perplexity.ai/search?q={encoded_query}"
+    
+    return perplexity_url
+
+# Not: Model sabitleri en üstte tanımlandı
+
+# Türkiye saat dilimi tanımlaması
+TURKIYE_SAAT_DILIMI = pytz.timezone('Europe/Istanbul')  # Bu, UTC+3 ile aynıdır
+
+# UTC zamanını Türkiye saatine dönüştüren yardımcı fonksiyon
+def utc_to_turkiye_saati(utc_datetime):
+    """
+    UTC zamanını Türkiye saatine (UTC+3) dönüştürür.
+    
+    Args:
+        utc_datetime: Dönüştürülecek UTC zaman nesnesi
+        
+    Returns:
+        Türkiye saatine dönüştürülmüş datetime nesnesi
+    """
+    if utc_datetime is None:
+        return None
+    
+    # datetime nesnesi timezone aware değilse, UTC kabul et
+    if utc_datetime.tzinfo is None:
+        utc_datetime = utc_datetime.replace(tzinfo=pytz.UTC)
+    
+    # Türkiye saatine dönüştür
+    turkiye_saati = utc_datetime.astimezone(TURKIYE_SAAT_DILIMI)
+    return turkiye_saati
+    
+# Datetime nesnesini Türkiye saatine göre formatlanmış string'e dönüştüren fonksiyon
+def format_turkiye_saati(datetime_obj, format_str="%d.%m.%Y %H:%M"):
+    """
+    Datetime nesnesini Türkiye saatine dönüştürüp belirtilen formatta string olarak döndürür.
+    
+    Args:
+        datetime_obj: Dönüştürülecek datetime nesnesi
+        format_str: Çıktı formatı (varsayılan: '31.03.2025 15:30')
+        
+    Returns:
+        Formatlanmış tarih-saat string'i
+    """
+    if datetime_obj is None:
+        return ""
+    
+    turkiye_saati = utc_to_turkiye_saati(datetime_obj)
+    if turkiye_saati is None:
+        return ""
+        
+    return turkiye_saati.strftime(format_str)
+
+# Global template context processor
+@app.context_processor
+def inject_now():
+    """
+    Şablon içinde kullanılacak global değişkenleri tanımlar:
+    - now: Şu anki UTC zaman
+    - now_tr: Şu anki Türkiye saati
+    - utc_to_tr: UTC'den Türkiye saatine dönüştürme fonksiyonu
+    - format_tr_saati: Datetime'ı formatlanmış Türkiye saati string'ine dönüştürme fonksiyonu
+    """
+    now_utc = datetime.datetime.now(pytz.UTC)
+    now_tr = utc_to_turkiye_saati(now_utc)
+    
+    # ISO format şablon fonksiyonu (YYYY-MM-DDTHH:MM:SS formatlı string döndürür)
+    def isoformat(dt):
+        if dt is None:
+            return ""
+        return dt.isoformat()
+        
+    return {
+        'now': now_utc,
+        'now_tr': now_tr,
+        'utc_to_tr': utc_to_turkiye_saati,
+        'format_tr_saati': format_turkiye_saati,
+        'isoformat': isoformat
+    }
+
+# Gübre formülasyonu açıklama API
+@app.route('/api/gubre-acikla', methods=['POST'])
+def gubre_acikla():
+    try:
+        data = request.json
+        formulasyon = data.get('formulasyon', '')
+        
+        if not formulasyon:
+            return jsonify({"error": "Gübre formülasyonu belirtilmedi"}), 400
+            
+        # 1. Adım: Claude ile açıklama almayı dene
+        try:
+            aciklama = claude_gubre_aciklamasi_olustur(formulasyon)
+            # Eğer Claude yanıt döndürürse ve boş değilse
+            if aciklama and aciklama.strip():
+                print(f"Claude API başarılı: {len(aciklama)} karakter yanıt alındı")
+                return jsonify({"aciklama": aciklama, "kaynak": "Claude"})
+            else:
+                # Claude boş yanıt döndürürse GPT-4o'ya geç
+                print("Claude boş yanıt döndürdü, GPT-4o'ya geçiliyor")
+                raise Exception("Claude boş yanıt döndürdü")
+        except Exception as claude_error:
+            print(f"Claude API hatası: {str(claude_error)}, GPT-4o'ya geçiliyor")
+            
+            # 2. Adım: GPT-4o ile açıklama almayı dene
+            try:
+                aciklama = openai_gubre_aciklamasi_olustur(formulasyon)
+                # GPT-4o yanıt döndürürse ve boş değilse
+                if aciklama and aciklama.strip():
+                    print(f"GPT-4o API başarılı: {len(aciklama)} karakter yanıt alındı")
+                    return jsonify({"aciklama": aciklama, "kaynak": "GPT-4o"})
+                else:
+                    # GPT-4o boş yanıt döndürürse Perplexity bağlantısı oluştur
+                    print("GPT-4o boş yanıt döndürdü, Perplexity bağlantısı oluşturuluyor")
+                    raise Exception("GPT-4o boş yanıt döndürdü")
+            except Exception as openai_error:
+                print(f"GPT-4o API hatası: {str(openai_error)}, Perplexity bağlantısı oluşturuluyor")
+                
+                # 3. Adım: Perplexity bağlantısı oluştur
+                perplexity_url = f"https://www.perplexity.ai/search/{formulasyon}-gübre-ne-işe-yarar"
+                perplexity_mesaj = f"Claude ve GPT-4o bilgi veremedi. Perplexity üzerinden detaylı bilgiye ulaşabilirsin: \n\n[{formulasyon} gübresi hakkında bilgi](https://www.perplexity.ai/search/{formulasyon}-gübre-ne-işe-yarar)"
+                
+                # Yerel yedek mekanizma olarak temel bir açıklama oluştur
+                try:
+                    yerel_aciklama = yerel_gubre_aciklamasi_olustur(formulasyon)
+                    aciklama = f"{yerel_aciklama}\n\n---\n\n{perplexity_mesaj}"
+                except:
+                    aciklama = perplexity_mesaj
+                
+                return jsonify({"aciklama": aciklama, "kaynak": "Yerel+Perplexity", "perplexity_url": perplexity_url})
+    except Exception as e:
+        print(f"Gübre açıklama hatası: {str(e)}")
+        return jsonify({"error": f"Gübre açıklaması alınamadı: {str(e)}"}), 500
+
+# Claude API ile gübre analizi
+def claude_gubre_aciklamasi_olustur(formulasyon):
+    """
+    Claude API kullanarak gübre formülasyonunu açıklar.
+    """
+    try:
+        # API anahtarı kontrolü
+        client = get_anthropic_client()
+        if not client:
+            raise Exception("Claude API anahtarı mevcut değil")
+        
+        # Claude API çağrısı
+        response = client.messages.create(
+            model=CLAUDE_MODEL,  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+            max_tokens=1000,
+            temperature=0.5,
+            system="Deneyimli bir tarım mühendisi olarak, gübrelerin içerikleri, kullanımları ve etkileri hakkında kapsamlı bilgiye sahipsin. Yanıtların teknik açıdan doğru ancak anlaşılır olmalı. Asla ekstra açıklama veya özür mesajları ekleme.",
+            messages=[
+                {
+                    "role": "user", 
+                    "content": f"""
+Sen deneyimli bir tarım mühendisisin.
+Aşağıdaki gübre formülasyonunun hangi elementleri içerdiğini, ne işe yaradığını, ne zaman kullanılacağını ve bitkiye etkisini sade ve kısa şekilde açıkla. Markdown formatında yanıt ver:
+
+Formülasyon: {formulasyon}
+
+Yanıtını oluştururken sadece formülasyonla ilgili bilgi ver, 'json' kelimesini ekleme, ve yanıtını hiçbir şekilde 'ben bilemiyorum' veya 'bilgi yetersiz' gibi ifadelerle sonlandırma. Kendine özgün bilgiler üretebilirsin."""
+                }
+            ]
+        )
+        
+        # Yanıtı al ve döndür
+        return response.content[0].text
+    except Exception as e:
+        print(f"Claude API hatası: {str(e)}")
+        # Hata olursa dışarıdan yakalanamaz
+        raise
+
+# OpenAI API ile gübre analizi
+def openai_gubre_aciklamasi_olustur(formulasyon):
+    """
+    OpenAI API kullanarak gübre formülasyonunu açıklar.
+    """
+    try:
+        # API anahtarı kontrolü (önce genel API anahtarı, yoksa özel anahtar)
+        client = get_openai_client()
+        if not client:
+            # Özel anahtar kullanımı (fallback)
+            try:
+                openai_custom = OpenAI(
+                    api_key="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"
+                )
+                client = openai_custom
+            except Exception as key_error:
+                raise Exception(f"OpenAI API anahtarı mevcut değil: {str(key_error)}")
+        
+        # OpenAI API çağrısı
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL, # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+            temperature=0.5,
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "Deneyimli bir tarım mühendisi olarak, gübrelerin içerikleri, kullanımları ve etkileri hakkında kapsamlı bilgiye sahipsin. Yanıtların teknik açıdan doğru ancak anlaşılır olmalı."
+                },
+                {
+                    "role": "user", 
+                    "content": f"\"{formulasyon}\" gübresinin içeriğini analiz et. Azot, fosfor, potasyum ve diğer elementlerin etkisini, bağ tarımı için faydasını sade ve Türkçe bir dille açıkla. Markdown formatında yanıt ver.\n\nYanıtına 'json' kelimesini ekleme, sadece markdown ile güzel bir açıklama yap."
+                }
+            ]
+        )
+        
+        # Yanıtı al ve döndür
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"OpenAI API hatası: {str(e)}")
+        # Hata olursa dışarıdan yakalanamaz
+        raise
+
+# Gübre adı ile bilgileri otomatik doldurma API
+@app.route('/api/gubre-auto-fill', methods=['POST'])
+def gubre_auto_fill():
+    try:
+        data = request.json
+        gubre_adi = data.get('gubre_adi', '')
+        
+        if not gubre_adi:
+            return jsonify({"error": "Gübre adı belirtilmedi"}), 400
+        
+        # OpenAI API'ye gönderilecek prompt
+        prompt = f"""
+        Sen deneyimli bir tarım danışmanısın. Kullanıcı sana bir gübre adı veriyor.
+        Sen bu gübrenin formülasyonunu, kullanım amacını ve ne zaman kullanılacağını araştırıp açıklıyorsun.
+
+        Gübre Adı: {gubre_adi}
+
+        Cevap formatı JSON olmalı, şu alanları içermeli:
+        {{
+            "formulasyon": "Gübre formülasyonu (örn: 13-40-13+Zn)",
+            "aciklama": "Gübrenin kullanım amacı ve etkileri", 
+            "kullanim_zamani": "Önerilen kullanım zamanı",
+            "kullanim_alani": "Yapraktan, Damla Sulama, Topraktan, Fertigasyon veya Yağmurlama olarak belirtilmeli"
+        }}
+
+        Eğer cevap bilemiyorsan, bu alanları boş ama JSON formatında döndür.
+        """
+        
+        try:
+            # API anahtarı kontrolü
+            client = get_openai_client()
+            if not client:
+                # API anahtarı yoksa özel anahtar ile devam et (fallback)
+                try:
+                    client = OpenAI(
+                        api_key="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"
+                    )
+                except Exception as key_error:
+                    raise Exception(f"OpenAI API anahtarı mevcut değil: {str(key_error)}")
+            
+            # OpenAI API çağrısı
+            response = client.chat.completions.create(
+                model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+                temperature=0.5,
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "Deneyimli bir tarım danışmanı olarak, gübrelerin formülasyonları, kullanım amaçları ve zamanlamaları hakkında kapsamlı bilgiye sahipsin. Yanıtların JSON formatında ve teknik açıdan doğru olmalı."
+                    },
+                    {
+                        "role": "user", 
+                        "content": prompt + "\n\nLütfen JSON formatında yanıt ver."
+                    }
+                ],
+                response_format={"type": "json_object"}
+            )
+            
+            # API yanıtını al
+            try:
+                result = json.loads(response.choices[0].message.content)
+                return jsonify(result)
+            except Exception as parse_error:
+                print(f"JSON parse hatası: {str(parse_error)}")
+                
+                # JSON parse edilemezse boş yanıt döndür
+                return jsonify({
+                    "formulasyon": "",
+                    "aciklama": "Yanıt ayrıştırılamadı.",
+                    "kullanim_zamani": "",
+                    "kullanim_alani": ""
+                })
+            
+        except Exception as api_error:
+            print(f"OpenAI API hatası: {str(api_error)}")
+            # API başarısız olursa boş yanıt döndür
+            return jsonify({
+                "formulasyon": "",
+                "aciklama": "OpenAI API hatası oluştu.",
+                "kullanim_zamani": "",
+                "kullanim_alani": ""
+            })
+            
+    except Exception as e:
+        print(f"Gübre otomatik doldurma hatası: {str(e)}")
+        return jsonify({"error": f"Gübre bilgileri alınamadı: {str(e)}"}), 500
+
+# Geçici yerel açıklama mekanizması
+def yerel_gubre_aciklamasi_olustur(formulasyon):
+    """
+    Formülasyon içeriğine göre yerel olarak açıklama oluşturur.
+    Bu fonksiyon, OpenAI API kota sorunu çözülene kadar kullanılacaktır.
+    """
+    # Formülasyonu parçalara ayır
+    parcalar = formulasyon.replace('+', ' ').replace('-', ' ').replace(',', ' ').split()
+    
+    # N-P-K değerlerini tanımlamaya çalış
+    azot, fosfor, potasyum = None, None, None
+    mikro_elementler = []
+    
+    # Sayısal değerleri bul
+    sayisal = [s for s in parcalar if s.replace('.', '', 1).isdigit()]
+    
+    # N-P-K formülasyonu varsa (örn: 20-20-20)
+    if len(sayisal) >= 3 and '-' in formulasyon:
+        try:
+            # Tipik NPK formülasyonu (20-20-20 gibi)
+            npk_degerler = formulasyon.split('+')[0].split('-')
+            if len(npk_degerler) >= 3:
+                azot = npk_degerler[0]
+                fosfor = npk_degerler[1]
+                potasyum = npk_degerler[2]
+        except:
+            pass
+    
+    # Mikro element kontrolü
+    for element in ['Zn', 'Fe', 'Ca', 'Mg', 'B', 'Cu', 'Mn', 'S']:
+        if element in formulasyon:
+            mikro_elementler.append(element)
+    
+    # Temel açıklama oluştur
+    temel_aciklama = f"**{formulasyon}** formülasyonlu gübre çözümlemesi:\n\n"
+    
+    # İçerik açıklaması
+    icerik = "### İçerik:\n"
+    if azot and fosfor and potasyum:
+        icerik += f"- %{azot} Azot (N)\n"
+        icerik += f"- %{fosfor} Fosfor (P)\n"
+        icerik += f"- %{potasyum} Potasyum (K)\n"
+    
+    # Mikro elementler
+    if mikro_elementler:
+        icerik += "- İçerdiği mikro elementler: " + ", ".join(mikro_elementler) + "\n"
+    
+    # Element açıklamaları
+    element_aciklamalari = "\n### Element Görevleri:\n"
+    if azot:
+        element_aciklamalari += "- **Azot (N):** Bitkinin yeşil aksamının gelişmesini sağlar. Yaprak ve sürgün oluşumunu destekler.\n"
+    if fosfor: 
+        element_aciklamalari += "- **Fosfor (P):** Kök gelişimi, çiçeklenme ve meyve oluşumunu destekler. Enerji transferinde rol oynar.\n"
+    if potasyum:
+        element_aciklamalari += "- **Potasyum (K):** Bitki direncini arttırır. Kuraklık, soğuk ve hastalıklara dayanıklılık sağlar.\n"
+    
+    # Mikro element açıklamaları
+    mikro_element_aciklamalari = ""
+    if 'Zn' in mikro_elementler:
+        mikro_element_aciklamalari += "- **Çinko (Zn):** Enzim aktivitesi ve hormon sentezi için önemlidir.\n"
+    if 'Fe' in mikro_elementler:
+        mikro_element_aciklamalari += "- **Demir (Fe):** Klorofil oluşumu ve fotosentez için gereklidir.\n"
+    if 'Ca' in mikro_elementler:
+        mikro_element_aciklamalari += "- **Kalsiyum (Ca):** Hücre duvarı oluşumunda ve yapısal sağlamlıkta rol oynar.\n"
+    if 'Mg' in mikro_elementler:
+        mikro_element_aciklamalari += "- **Magnezyum (Mg):** Klorofilin ana bileşenidir ve fotosentez için önemlidir.\n"
+    if 'B' in mikro_elementler:
+        mikro_element_aciklamalari += "- **Bor (B):** Polen oluşumu ve çiçeklenme için gereklidir.\n"
+    
+    # Kullanım önerileri
+    kullanim = "\n### Kullanım Önerileri:\n"
+    
+    if azot and int(azot) > 15 and fosfor and int(fosfor) > 15 and potasyum and int(potasyum) > 15:
+        kullanim += "- Dengeli içeriği ile bitkinin tüm gelişim dönemlerinde kullanılabilir.\n"
+        kullanim += "- Genel bitki besleme ve gelişimi için idealdir.\n"
+    elif azot and int(azot) > 20:
+        kullanim += "- Yüksek azot içeriği ile vejetatif gelişim (yaprak ve sürgün) döneminde kullanım için uygundur.\n"
+    elif fosfor and int(fosfor) > 20:
+        kullanim += "- Yüksek fosfor içeriği ile kök gelişimi, çiçeklenme ve meyve oluşumu dönemlerinde etkilidir.\n"
+    elif potasyum and int(potasyum) > 20:
+        kullanim += "- Yüksek potasyum içeriği ile meyve olgunlaşması ve bitki direncini artırmak için idealdir.\n"
+    else:
+        kullanim += "- Üreticinin tavsiye ettiği miktarda ve dönemlerde kullanılmalıdır.\n"
+        kullanim += "- Damla sulama, yapraktan püskürtme veya topraktan uygulama yöntemleriyle kullanılabilir.\n"
+    
+    # Tüm açıklamayı birleştir
+    return temel_aciklama + icerik + element_aciklamalari + mikro_element_aciklamalari + kullanim
+
+# Ana sayfa
+@app.route('/')
+def index():
+    # İlaç stok uyarısı kontrolü (1200 litre eşdeğeri altında olanlar)
+    ilaclar = Ilac.query.order_by(Ilac.ad).all()
+    ilac_uyarilar = []
+    
+    for ilac in ilaclar:
+        if ilac.miktar * 100 / ilac.dozaj < 1200:  # 100 litre için dozaj değerini kullanarak hesapla
+            ilac_uyarilar.append(ilac)
+    
+    return render_template('index.html', ilac_uyarilar=ilac_uyarilar)
+
+# ----- İLAÇ YÖNETİMİ -----
+@app.route('/ilaclar', methods=['GET', 'POST'])
+def ilaclar():
+    if request.method == 'POST':
+        # Yeni ilaç ekleme
+        ad = request.form['ad'].strip()
+        etken_madde = request.form.get('etken_madde', '').strip()
+        hedef_hastalik = request.form.get('hedef_hastalik', '').strip()
+        
+        # Ambalaj bilgileri (opsiyonel)
+        adet_str = request.form.get('adet', '').strip()
+        ambalaj_miktari_str = request.form.get('ambalaj_miktari', '').strip()
+        ambalaj_birimi = request.form.get('ambalaj_birimi', '').strip().lower()
+        
+        # Adet ve ambalaj bilgileri sayıya dönüştür
+        adet = int(adet_str) if adet_str else None
+        ambalaj_miktari = float(ambalaj_miktari_str) if ambalaj_miktari_str else None
+        
+        # Toplam miktar
+        miktar = float(request.form['miktar'])
+        birim = request.form['birim'].strip().lower()  # Birim standartlaştırılmış olsun
+        
+        # Dozaj
+        dozaj_str = request.form.get('dozaj', '')
+        dozaj = float(dozaj_str) if dozaj_str.strip() else None
+        
+        # Loglama 
+        print(f"İlaç ekleme isteği: {ad} ({birim}), etken madde: {etken_madde}, hedef: {hedef_hastalik}, dozaj: {dozaj}")
+        
+        try:
+            from sqlalchemy import func
+            
+            # 1. İsim ve birime göre ön filtreleme
+            potansiyel_ilaclar = Ilac.query.filter(
+                func.lower(Ilac.ad) == func.lower(ad),
+                func.lower(Ilac.birim) == birim  # Birim zaten lowercase olarak standardize edildi
+            ).all()
+            
+            print(f"İsim ve birime göre bulunan ilaç sayısı: {len(potansiyel_ilaclar)}")
+            
+            # 2. Potansiyel eşleşmeleri detaylı kontrol
+            tam_eslesme = None
+            
+            for ilac in potansiyel_ilaclar:
+                print(f"Karşılaştırma: DB[{ilac.id}] ({ilac.ad}, {ilac.etken_madde}, {ilac.hedef_hastalik}, {ilac.dozaj}) vs Yeni({ad}, {etken_madde}, {hedef_hastalik}, {dozaj})")
+                
+                # 2.1 Etken madde kontrolü
+                etken_madde_eslesme = False
+                if not etken_madde and not ilac.etken_madde:  # İki değer de boşsa eşleşir
+                    etken_madde_eslesme = True
+                elif etken_madde and ilac.etken_madde:  # İki değer de doluysa karşılaştır
+                    etken_madde_eslesme = etken_madde.lower() == ilac.etken_madde.lower()
+                
+                # 2.2 Hedef hastalık kontrolü
+                hedef_hastalik_eslesme = False
+                if not hedef_hastalik and not ilac.hedef_hastalik:  # İki değer de boşsa eşleşir
+                    hedef_hastalik_eslesme = True
+                elif hedef_hastalik and ilac.hedef_hastalik:  # İki değer de doluysa karşılaştır
+                    hedef_hastalik_eslesme = hedef_hastalik.lower() == ilac.hedef_hastalik.lower()
+                
+                # 2.3 Dozaj kontrolü (küçük tolerans ile)
+                dozaj_eslesme = False
+                if dozaj is None and ilac.dozaj is None:  # İki değer de boşsa eşleşir
+                    dozaj_eslesme = True
+                elif dozaj is not None and ilac.dozaj is not None:
+                    # %1'den az fark varsa aynı kabul et
+                    max_deger = max(dozaj, ilac.dozaj)
+                    if max_deger > 0:
+                        fark_orani = abs(dozaj - ilac.dozaj) / max_deger
+                        dozaj_eslesme = fark_orani < 0.01  # %1'den az fark
+                
+                print(f"Eşleşme: Etken madde:{etken_madde_eslesme}, Hedef:{hedef_hastalik_eslesme}, Dozaj:{dozaj_eslesme}")
+                
+                # Tüm kriterler eşleşiyorsa bu ilaç tam eşleşmiştir
+                if etken_madde_eslesme and hedef_hastalik_eslesme and dozaj_eslesme:
+                    tam_eslesme = ilac
+                    print(f"Tam eşleşme bulundu: ID={ilac.id}, {ilac.ad}")
+                    break
+            
+            flash_message = ""
+            
+            # 3. Eşleşme varsa güncelle, yoksa yeni kayıt oluştur
+            if tam_eslesme:
+                print(f"İlaç stok güncelleniyor: {ad} (ID:{tam_eslesme.id})")
+                
+                # 3.1 Stoğu güncelle
+                eski_miktar = tam_eslesme.miktar
+                tam_eslesme.miktar += miktar
+                
+                # 3.2 Adet bilgisini güncelle (eğer varsa)
+                if adet is not None:
+                    if tam_eslesme.adet is not None:
+                        tam_eslesme.adet += adet
+                    else:
+                        tam_eslesme.adet = adet
+                        
+                # 3.3 Ambalaj bilgilerini güncelle (eğer yeni veri varsa)
+                if ambalaj_miktari and ambalaj_birimi:
+                    if (not tam_eslesme.ambalaj_miktari) or (not tam_eslesme.ambalaj_birimi):
+                        # Mevcut ilaçta ambalaj bilgisi yoksa yeni değeri kullan
+                        tam_eslesme.ambalaj_miktari = ambalaj_miktari
+                        tam_eslesme.ambalaj_birimi = ambalaj_birimi
+                    # Ambalaj birimi uyumluysa ambalaj miktarını güncelle
+                    elif tam_eslesme.ambalaj_birimi.lower() == ambalaj_birimi.lower():
+                        tam_eslesme.ambalaj_miktari = ambalaj_miktari
+                
+                db.session.commit()
+                flash_message = f'{ad} ilacının stoğu güncellendi. Eski stok: {eski_miktar} {birim}, Yeni stok: {tam_eslesme.miktar} {birim}'
+                print(f"İlaç stoğu güncellendi: {ad}, {eski_miktar} → {tam_eslesme.miktar} {birim}")
+            else:
+                # Eşleşme bulunamadıysa yeni ilaç oluştur
+                print(f"Tam eşleşme bulunamadı, yeni ilaç kaydı oluşturuluyor: {ad}")
+                yeni_ilac = Ilac(
+                    ad=ad,
+                    etken_madde=etken_madde,
+                    hedef_hastalik=hedef_hastalik,
+                    miktar=miktar,
+                    birim=birim,
+                    dozaj=dozaj,
+                    adet=adet,
+                    ambalaj_miktari=ambalaj_miktari,
+                    ambalaj_birimi=ambalaj_birimi
+                )
+                
+                db.session.add(yeni_ilac)
+                db.session.commit()
+                flash_message = f'{ad} ilacı başarıyla eklendi.'
+                print(f"Yeni ilaç eklendi: {ad}, ID:{yeni_ilac.id}")
+            
+            # Başarı mesajını göster
+            flash(flash_message, 'success')
+            
+        except Exception as e:
+            print(f"İlaç stok güncelleme hatası: {str(e)}")
+            db.session.rollback()
+            flash(f'İşlem sırasında bir hata oluştu: {str(e)}', 'danger')
+        
+        return redirect(url_for('ilaclar'))
+    
+    # GET isteği - tüm ilaçları listele
+    # Tüm ilaçları alfabetik sıralı getir
+    ilaclar = Ilac.query.order_by(Ilac.ad).all()
+    
+    # Yerel dosyadan ilaç verilerini yükle
+    initial_ilaclar = []
+    try:
+                etken_madde=etken_madde,
+                hedef_hastalik=hedef_hastalik,
+                miktar=miktar,
+                birim=birim,
+                dozaj=dozaj,
+                adet=adet,
+                ambalaj_miktari=ambalaj_miktari,
+                ambalaj_birimi=ambalaj_birimi
+            )
+            
+            db.session.add(yeni_ilac)
+            db.session.commit()
+            flash_message = f'{ad} ilacı başarıyla eklendi.'
+        
+        # Başarı mesajını göster
+        flash(flash_message, 'success')
+        
+        return redirect(url_for('ilaclar'))
+    
+    # Tüm ilaçları alfabetik sıralı getir
+    ilaclar = Ilac.query.order_by(Ilac.ad).all()
+    
+    # Yerel dosyadan ilaç verilerini yükle
+    initial_ilaclar = []
+    try:
+        # Dosyadan oku
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            zirai_ilaclar = json.load(f)
+                
+        # Verileri ilac.html şablonuna uygun formata dönüştür
+        for ilac in zirai_ilaclar:
+            # Dozaj bilgisini sayısal formata dönüştür
+            dozaj_str = ilac.get('dozaj', '0')
+            if dozaj_str is None:
+                dozaj_str = '0'
+            # Sayısal değer mi kontrol et
+            if isinstance(dozaj_str, (int, float)):
+                dozaj_value = float(dozaj_str)
+            else:
+                # Sayısal olmayan değerden sayısal kısmı çıkar
+                import re
+                dozaj_match = re.search(r'(\d+(?:\.\d+)?)', str(dozaj_str))
+                dozaj_value = float(dozaj_match.group(1)) if dozaj_match else 0
+            
+            initial_ilaclar.append({
+                'ad': ilac.get('ilac_adi', '') or ilac.get('ad', ''),
+                'etken_madde': ilac.get('etken_madde', ''),
+                'hedef_hastalik': ilac.get('hastalik', '') or ilac.get('hedef_hastalik', ''),
+                'dozaj': dozaj_value
+            })
+        print(f"Dosyadan ilac listesi yüklendi: {len(initial_ilaclar)} ilaç.")
+    except Exception as e:
+        print(f"Dosyadan ilac listesi yükleme hatası: {e}")
+        initial_ilaclar = []
+    
+    # Tarayıcı önbelleğini devre dışı bırakacak başlıkları ekleyelim
+    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+@app.route('/ilac/duzenle/<int:id>', methods=['POST'])
+def ilac_duzenle(id):
+    ilac = Ilac.query.get_or_404(id)
+    
+    # Önceki değerleri sakla
+    eski_ad = ilac.ad
+    
+    # Yeni değerleri al
+    ilac.ad = request.form['ad']
+    ilac.etken_madde = request.form['etken_madde']
+    ilac.hedef_hastalik = request.form['hedef_hastalik']
+    
+    # Ambalaj bilgileri (opsiyonel)
+    adet = request.form.get('adet')
+    ambalaj_miktari = request.form.get('ambalaj_miktari')
+    ambalaj_birimi = request.form.get('ambalaj_birimi')
+    
+    # Adet ve ambalaj bilgileri sayıya dönüştür
+    ilac.adet = int(adet) if adet and adet.strip() else None
+    ilac.ambalaj_miktari = float(ambalaj_miktari) if ambalaj_miktari and ambalaj_miktari.strip() else None
+    ilac.ambalaj_birimi = ambalaj_birimi if ambalaj_birimi and ambalaj_birimi.strip() else None
+    
+    # Toplam miktar
+    ilac.miktar = float(request.form['miktar'])
+    ilac.birim = request.form['birim']
+    ilac.dozaj = float(request.form['dozaj'])
+    
+    # Veritabanına kaydet
+    db.session.commit()
+    
+    # JSON kaydetme seçeneği kaldırıldı
+    flash(f'{ilac.ad} ilacı başarıyla güncellendi.', 'success')
+        
+    # Doğrudan /ilaclar sayfasına yönlendirmek yerine, önce bir temizleme isteği yapalım
+    response = make_response(redirect(url_for('ilaclar')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+@app.route('/ilac/sil/<int:id>', methods=['POST'])
+def ilac_sil(id):
+    ilac = Ilac.query.get_or_404(id)
+    
+    # İlacın kullanım kayıtlarını da sil
+    IlacKullanim.query.filter_by(ilac_id=id).delete()
+    
+    db.session.delete(ilac)
+    db.session.commit()
+    flash('İlaç başarıyla silindi', 'success')
+    return redirect(url_for('ilaclar'))
+
+# ----- GÜBRE YÖNETİMİ -----
+@app.route('/gubreler', methods=['GET', 'POST'])
+def gubreler():
+    if request.method == 'POST':
+        # Yeni gübre ekleme
+        ad = request.form['ad']
+        formulasyon = request.form['formulasyon']
+        miktar = float(request.form['miktar'])
+        birim = request.form['birim']
+        kullanim_alani = request.form['kullanim_alani']
+        uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+        not_bilgisi = request.form['not_bilgisi']
+        
+        # Gübrenin veritabanında var olup olmadığını kontrol et - GÜNCELLENEN SORGU
+        # Tüm önemli verilere göre tam eşleşme arama
+        # Büyük-küçük harfe duyarsız karşılaştırma için func.lower() kullanılır
+        
+        from sqlalchemy.sql import func
+        
+        # 1. Temel verilerin kontrolü için sorgu (büyük-küçük harfe duyarsız)
+        mevcut_gubreler = Gubre.query.filter(
+            func.lower(Gubre.ad) == func.lower(ad),
+            func.lower(Gubre.birim) == func.lower(birim)
+        ).all()
+        
+        # 2. Tam eşleşen gübre olup olmadığını kontrol et
+        tam_eslesme = None
+        
+        for gubre in mevcut_gubreler:
+            # Temel bilgilere ek olarak tüm kritik alanları kontrol et
+            # Boş (None) alanların karşılaştırması için özel kontrol
+            formulasyon_eslesme = (
+                (not formulasyon and not gubre.formulasyon) or 
+                (formulasyon and gubre.formulasyon and 
+                 formulasyon.lower() == gubre.formulasyon.lower())
+            )
+            
+            kullanim_alani_eslesme = (
+                (not kullanim_alani and not gubre.kullanim_alani) or
+                (kullanim_alani and gubre.kullanim_alani and 
+                 kullanim_alani.lower() == gubre.kullanim_alani.lower())
+            )
+            
+            # Uygulama dozu için hassas karşılaştırma - yüzde 0.01 fark tolere edilir
+            uygulama_dozu_eslesme = False
+            if uygulama_dozu is not None and gubre.uygulama_dozu is not None:
+                fark_orani = abs(uygulama_dozu - gubre.uygulama_dozu) / max(uygulama_dozu, gubre.uygulama_dozu) if max(uygulama_dozu, gubre.uygulama_dozu) > 0 else 0
+                uygulama_dozu_eslesme = fark_orani < 0.01  # %1'den az fark
+            elif uygulama_dozu is None and gubre.uygulama_dozu is None:
+                uygulama_dozu_eslesme = True
+            
+            # Tam eşleşme kontrolü
+            if formulasyon_eslesme and kullanim_alani_eslesme and uygulama_dozu_eslesme:
+                tam_eslesme = gubre
+                break
+                
+        flash_message = ""
+        
+        if tam_eslesme:
+            # Gübre tam olarak eşleşiyorsa stoğu güncelle
+            eski_miktar = tam_eslesme.miktar
+            tam_eslesme.miktar += miktar  # Stoğu arttır
+            
+            # Not bilgisini güncelle (eğer mevcut gübre not bilgisi yoksa veya yeni bilgi varsa)
+            if not_bilgisi and (not tam_eslesme.not_bilgisi or tam_eslesme.not_bilgisi.strip() == ""):
+                tam_eslesme.not_bilgisi = not_bilgisi
+                
+            db.session.commit()
+            flash_message = f'{ad} gübresinin stoğu güncellendi. Eski stok: {eski_miktar} {birim}, Yeni stok: {tam_eslesme.miktar} {birim}'
+        else:
+            # Gübre yoksa yeni gübre oluştur
+            yeni_gubre = Gubre(
+                ad=ad,
+                formulasyon=formulasyon,
+                miktar=miktar,
+                birim=birim,
+                kullanim_alani=kullanim_alani,
+                uygulama_dozu=uygulama_dozu,
+                not_bilgisi=not_bilgisi
+            )
+            
+            db.session.add(yeni_gubre)
+            db.session.commit()
+            flash_message = f'{ad} gübresi başarıyla eklendi.'
+        
+        # Başarı mesajını göster
+        flash(flash_message, 'success')
+        return redirect(url_for('gubreler'))
+    
+    # Tüm gübreleri getir
+    gubreler = Gubre.query.all()
+    return render_template('gubre.html', gubreler=gubreler)
+
+@app.route('/gubre/duzenle/<int:id>', methods=['POST'])
+def gubre_duzenle(id):
+    gubre = Gubre.query.get_or_404(id)
+    gubre.ad = request.form['ad']
+    gubre.formulasyon = request.form['formulasyon']
+    gubre.miktar = float(request.form['miktar'])
+    gubre.birim = request.form['birim']
+    gubre.kullanim_alani = request.form['kullanim_alani']
+    gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+    gubre.not_bilgisi = request.form['not_bilgisi']
+    
+    db.session.commit()
+    flash('Gübre başarıyla güncellendi', 'success')
+    return redirect(url_for('gubreler'))
+
+@app.route('/gubre/sil/<int:id>', methods=['POST'])
+def gubre_sil(id):
+    gubre = Gubre.query.get_or_404(id)
+    
+    # Gübrenin kullanım kayıtlarını da sil
+    GubreKullanim.query.filter_by(gubre_id=id).delete()
+    
+    db.session.delete(gubre)
+    db.session.commit()
+    flash('Gübre başarıyla silindi', 'success')
+    return redirect(url_for('gubreler'))
+
+# ----- İLAÇ KULLANIM YÖNETİMİ -----
+@app.route('/ilac-kullanim', methods=['GET', 'POST'])
+def ilac_kullanim():
+    if request.method == 'POST':
+        total_tank_su = float(request.form['su_miktari'])  # Toplam tank su miktarı
+        ilac_ids = request.form.getlist('ilac_ids[]')
+        bag_ids = request.form.getlist('bag_ids[]')  # Birden çok bağ ID'si
+        bag_su_miktarlari = request.form.getlist('bag_su_miktarlari[]')  # Her bağa kullanılacak su miktarı
+        
+        # Uygulama tarihini al
+        uygulama_tarihi = request.form.get('uygulama_tarihi')
+        
+        # Tarih alanı gönderilmemişse şimdiki zamanı kullan
+        if not uygulama_tarihi:
+            uygulama_tarihi_dt = datetime.datetime.utcnow()
+        else:
+            try:
+                # Formattan datetime nesnesine dönüştür (2025-04-11T13:45 -> datetime)
+                uygulama_tarihi_dt = datetime.datetime.strptime(uygulama_tarihi, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                # Dönüştürme hatası olursa şimdiki zamanı kullan
+                uygulama_tarihi_dt = datetime.datetime.utcnow()
+                flash('Tarih formatı hatalı. Geçerli tarih kullanıldı.', 'warning')
+        
+        # Çoklu bağ kullanımı veya tek bağ kullanımını kontrol et
+        coklu_bag_kullanimi = len(bag_ids) > 0 and len(bag_su_miktarlari) > 0
+        tek_bag_id = request.form.get('bag_id')
+        
+        basarili_kayitlar = 0
+        hatalar = []
+        
+        # Tek bağ kullanımı için ID'yi hazırla
+        if not coklu_bag_kullanimi and tek_bag_id and tek_bag_id.isdigit() and int(tek_bag_id) > 0:
+            tek_bag_id = int(tek_bag_id)
+            bag_ids = [tek_bag_id]
+            bag_su_miktarlari = [total_tank_su]  # Tek bağ için tüm suyu kullan
+        elif not coklu_bag_kullanimi:
+            # Bağ seçilmemiş, tüm su tek kullanımda
+            bag_ids = [None]
+            bag_su_miktarlari = [total_tank_su]
+            
+        # Her bağ için döngü
+        for bag_index, bag_id in enumerate(bag_ids):
+            # Bağ ID'sini kontrol et
+            if bag_id and str(bag_id).isdigit() and int(bag_id) > 0:
+                bag_id = int(bag_id)
+            else:
+                bag_id = None
+                
+            # Bu bağ için su miktarını al
+            try:
+                bag_su_miktari = float(bag_su_miktarlari[bag_index])
+            except (IndexError, ValueError):
+                bag_su_miktari = 0
+                continue  # Su miktarı yoksa bu bağı atla
+            
+            # Her ilaç için ayrı kayıt oluştur
+            for ilac_index, ilac_id in enumerate(ilac_ids):
+                if not ilac_id:
+                    continue  # Boş seçimleri atla
+                    
+                try:
+                    ilac_id = int(ilac_id)
+                    
+                    # İlacı bulalım
+                    ilac = Ilac.query.get_or_404(ilac_id)
+                    
+                    # Manuel dozaj kullanılıyor mu kontrol et
+                    manuel_dozaj_check = request.form.getlist('manuel_dozaj_check[]')
+                    manuel_dozaj_values = request.form.getlist('manuel_dozaj[]')
+                    
+                    if manuel_dozaj_check and len(manuel_dozaj_check) > ilac_index and len(manuel_dozaj_values) > ilac_index and manuel_dozaj_values[ilac_index].strip():
+                        try:
+                            # Manuel dozaj değerini kullan
+                            manuel_dozaj = float(manuel_dozaj_values[ilac_index])
+                            gereken_ilac_miktari = (bag_su_miktari / 100) * manuel_dozaj
+                        except (ValueError, IndexError):
+                            # Manuel dozaj değeri geçersizse standart dozajı kullan
+                            gereken_ilac_miktari = (bag_su_miktari / 100) * ilac.dozaj
+                    else:
+                        # Standart dozaj hesaplaması (100 litre suya ne kadar ilaç)
+                        gereken_ilac_miktari = (bag_su_miktari / 100) * ilac.dozaj
+                    
+                    # Stok kontrolü
+                    if gereken_ilac_miktari > ilac.miktar:
+                        hatalar.append(f'Stokta yeterli {ilac.ad} bulunmuyor! Gereken: {gereken_ilac_miktari:.2f} {ilac.birim}')
+                        continue
+                    
+                    # Formdan tank_id'yi al
+                    tank_id = request.form.get('tank_id')
+                    
+                    # Kullanım kaydı oluştur (tank_id ve uygulama tarihi ile)
+                    yeni_kullanim = IlacKullanim(
+                        ilac_id=ilac_id,
+                        bag_id=bag_id,
+                        kullanilan_miktar=gereken_ilac_miktari,
+                        su_miktari=bag_su_miktari,
+                        tank_id=tank_id,  # Tank ID'yi ekle (gruplandırma için)
+                        tarih=uygulama_tarihi_dt  # Uygulama tarihini ekle
+                    )
+                    
+                    # Stoktan düş
+                    ilac.miktar -= gereken_ilac_miktari
+                    
+                    db.session.add(yeni_kullanim)
+                    basarili_kayitlar += 1
+                    
+                except Exception as e:
+                    hatalar.append(f'Hata: {ilac_id} kimlikli ilaç işlenirken bir hata oluştu - {str(e)}')
+        
+        # Tüm değişiklikleri commit et
+        if basarili_kayitlar > 0:
+            db.session.commit()
+            flash(f'{basarili_kayitlar} ilaç kullanımı kaydedildi.', 'success')
+        
+        # Hataları göster
+        for hata in hatalar:
+            flash(hata, 'danger')
+            
+        return redirect(url_for('ilac_kullanim'))
+    
+    # Mevcut ilaçları ve bağları getir (ilaçları alfabetik sıralı)
+    # Önbellek iyileştirmesi - sayfa yenilenmedikçe veritabanına gitme
+    from flask import session, g
+    
+    # Performans iyileştirmesi - Son 7 günün kayıtlarını getir veya sayfa parametrelerine göre filtrele
+    limit = request.args.get('limit', 10, type=int)  # Varsayılan olarak son 10 kayıt
+    
+    # Son 7 gün içindeki kayıtları getir (özel filtre yoksa)
+    bir_hafta_once = datetime.datetime.now() - datetime.timedelta(days=7)
+    
+    # Sadece gerekli alanları seç (SELECT * yerine seçili alanlar)
+    son_kullanimlar = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= bir_hafta_once
+    ).order_by(
+        IlacKullanim.tarih.desc()
+    ).limit(limit).all()
+    
+    # İlaç kayıtlarını grupla (aynı tank, tarih, bağ ve su miktarına göre)
+    ilac_gruplari = {}
+    
+    for kullanim in son_kullanimlar:
+        # Gruplama için anahtar oluştur: tank_id, bag_id, su_miktarı ve tarih (saat-dakika hassasiyetinde)
+        tarih_str = kullanim.tarih.strftime('%Y-%m-%d %H:%M') if kullanim.tarih else "bilinmeyen_tarih"
+        bag_id = kullanim.bag_id if kullanim.bag_id else 0
+        su_miktari = kullanim.su_miktari
+        tank_id = kullanim.tank_id if kullanim.tank_id else f"tank_{tarih_str}_{bag_id}"
+        
+        # Gruplama anahtarı
+        grup_key = f"{tank_id}_{bag_id}_{su_miktari}_{tarih_str}"
+        
+        # Grubu oluştur veya mevcut gruba ekle
+        if grup_key not in ilac_gruplari:
+            ilac_gruplari[grup_key] = {
+                "tank_id": tank_id,
+                "tarih": kullanim.tarih,
+                "bag_id": bag_id,
+                "bag_adi": kullanim.bag.ad if kullanim.bag else None,
+                "su_miktari": su_miktari,
+                "ilaclar": []
+            }
+        
+        # Kaydı ilgili gruba ekle
+        ilac_gruplari[grup_key]["ilaclar"].append(kullanim)
+    
+    # Toplam kayıt sayısını hesapla (daha fazla göster butonu için)
+    toplam_kayit_sayisi = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= bir_hafta_once
+    ).count()
+    
+    # Session bazlı önbellek sistemi kullan (g nesnesi yerine)
+    ilaclar = Ilac.query.order_by(Ilac.ad).all()
+    baglar = Bag.query.all()
+    
+    return render_template('ilac_kullanim.html', 
+                          ilaclar=ilaclar, 
+                          son_kullanimlar=son_kullanimlar, 
+                          ilac_gruplari=ilac_gruplari, 
+                          baglar=baglar,
+                          limit=limit,
+                          toplam_kayit_sayisi=toplam_kayit_sayisi)
+
+# ----- GÜBRE KULLANIM YÖNETİMİ -----
+@app.route('/gubre-kullanim', methods=['GET', 'POST'])
+def gubre_kullanim():
+    if request.method == 'POST':
+        gubre_id = int(request.form['gubre_id'])
+        kullanilan_miktar = float(request.form['kullanilan_miktar'])
+        alan = float(request.form['alan']) if request.form['alan'] else None
+        bag_id = request.form.get('bag_id')
+        
+        # Bağ ID'sini sayıya dönüştür veya None olarak bırak
+        if bag_id and bag_id.isdigit() and int(bag_id) > 0:
+            bag_id = int(bag_id)
+        else:
+            bag_id = None
+        
+        # Gübreyi bulalım
+        gubre = Gubre.query.get_or_404(gubre_id)
+        
+        # Stok kontrolü
+        if kullanilan_miktar > gubre.miktar:
+            flash(f'Stokta yeterli {gubre.ad} bulunmuyor! Gereken: {kullanilan_miktar} {gubre.birim}', 'danger')
+            return redirect(url_for('gubre_kullanim'))
+        
+        # Kullanım kaydı oluştur
+        yeni_kullanim = GubreKullanim(
+            gubre_id=gubre_id,
+            bag_id=bag_id,
+            kullanilan_miktar=kullanilan_miktar,
+            alan=alan
+        )
+        
+        # Stoktan düş
+        gubre.miktar -= kullanilan_miktar
+        
+        db.session.add(yeni_kullanim)
+        db.session.commit()
+        flash(f'Gübre kullanımı kaydedildi. {kullanilan_miktar} {gubre.birim} kullanıldı.', 'success')
+        return redirect(url_for('gubre_kullanim'))
+    
+    # Performans iyileştirmesi - Son 7 günün kayıtlarını getir veya sayfa parametrelerine göre filtrele
+    limit = request.args.get('limit', 10, type=int)  # Varsayılan olarak son 10 kayıt
+    
+    # Son 7 gün içindeki kayıtları getir (özel filtre yoksa)
+    bir_hafta_once = datetime.datetime.now() - datetime.timedelta(days=7)
+    
+    # Sadece gerekli alanları seç ve son kayıtları getir
+    son_kullanimlar = GubreKullanim.query.filter(
+        GubreKullanim.tarih >= bir_hafta_once
+    ).order_by(
+        GubreKullanim.tarih.desc()
+    ).limit(limit).all()
+    
+    # Toplam kayıt sayısını hesapla (daha fazla göster butonu için)
+    toplam_kayit_sayisi = GubreKullanim.query.filter(
+        GubreKullanim.tarih >= bir_hafta_once
+    ).count()
+    
+    # Performans iyileştirmesi - Bağları ve gübreleri getir
+    gubreler = Gubre.query.all()
+    baglar = Bag.query.all()
+    
+    return render_template('gubre_kullanim.html', 
+                          gubreler=gubreler, 
+                          son_kullanimlar=son_kullanimlar, 
+                          baglar=baglar,
+                          limit=limit,
+                          toplam_kayit_sayisi=toplam_kayit_sayisi)
+
+# ----- RAPORLAR -----
+@app.route('/raporlar')
+def raporlar():
+    # Form parametrelerini al
+    rapor_turu = request.args.get('rapor_turu', 'gunluk')
+    baslangic_tarih = request.args.get('baslangic_tarih')
+    bitis_tarih = request.args.get('bitis_tarih')
+    
+    # Şu anki zamanı al (UTC olarak saklanıyor, gösterim için UTC+3 Türkiye saatine çevrilecek)
+    now = datetime.datetime.now()
+    print(f"[DEBUG-FIX] Mevcut zaman: {now}")
+    
+    # Form verilerini logla
+    print(f"[DEBUG-FIX] Filtre parametreleri: rapor_turu={rapor_turu}, baslangic_tarih={baslangic_tarih}, bitis_tarih={bitis_tarih}")
+    
+    # Seçilen rapor türüne göre tarih aralığını belirle
+    if rapor_turu == 'gunluk':
+        # URL'den tarih belirtilmişse onu kullan, yoksa bugünü kullan
+        if baslangic_tarih:
+            secili_tarih = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
+        else:
+            secili_tarih = now
+            
+        # Günlük rapor: Seçilen günün 00:00 - 23:59
+        baslangic = secili_tarih.replace(hour=0, minute=0, second=0, microsecond=0)
+        bitis = secili_tarih.replace(hour=23, minute=59, second=59, microsecond=999999)
+        print(f"[DEBUG-FIX] Günlük rapor tarih aralığı seçildi: {baslangic} - {bitis}")
+    elif rapor_turu == 'aylik':
+        # URL'den tarih belirtilmişse o ayı kullan, yoksa şu anki ayı kullan
+        if baslangic_tarih:
+            secili_tarih = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
+        else:
+            secili_tarih = now
+            
+        # Aylık rapor: Seçilen ayın 1'inden ay sonuna kadar
+        baslangic = secili_tarih.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Ay sonu hesaplama (sonraki ayın 1'i - 1 mikrosaniye)
+        if secili_tarih.month == 12:
+            bitis = secili_tarih.replace(year=secili_tarih.year+1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(microseconds=1)
+        else:
+            bitis = secili_tarih.replace(month=secili_tarih.month+1, day=1, hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(microseconds=1)
+            
+        print(f"[DEBUG-FIX] Aylık rapor tarih aralığı seçildi: {baslangic} - {bitis}")
+    elif rapor_turu == 'yillik':
+        # URL'den tarih belirtilmişse o yılı kullan, yoksa şu anki yılı kullan
+        if baslangic_tarih:
+            secili_tarih = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
+        else:
+            secili_tarih = now
+            
+        # Yıllık rapor: Seçilen yılın başından sonuna kadar
+        baslangic = secili_tarih.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        bitis = secili_tarih.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        print(f"[DEBUG-FIX] Yıllık rapor tarih aralığı seçildi: {baslangic} - {bitis}")
+    elif rapor_turu == 'ozel':
+        # Özel rapor: Kullanıcının belirttiği tarih aralığı
+        if baslangic_tarih:
+            baslangic = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d').replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            # Belirtilmemişse, 30 gün öncesi
+            baslangic = now - datetime.timedelta(days=30)
+            
+        if bitis_tarih:
+            bitis = datetime.datetime.strptime(bitis_tarih, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            # Belirtilmemişse, bugün
+            bitis = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+        print(f"[DEBUG-FIX] Özel tarih aralığı seçildi: {baslangic} - {bitis}")
+    else:
+        # Tanımlanmamış rapor türü için son 30 gün
+        baslangic = now - datetime.timedelta(days=30)
+        bitis = now
+        print(f"[DEBUG-FIX] Tanımlanmamış rapor türü için son 30 gün seçildi: {baslangic} - {bitis}")
+    
+    # Nihai tarih aralığını logla
+    print(f"[DEBUG-FIX] FİNAL tarih aralığı: {baslangic.strftime('%Y-%m-%d %H:%M:%S')} - {bitis.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    try:
+        # İlaç kullanımları - tarih aralığı filtrelemesi
+        ilac_kullanimlari = IlacKullanim.query.filter(
+            IlacKullanim.tarih >= baslangic,
+            IlacKullanim.tarih <= bitis
+        ).order_by(IlacKullanim.tarih.desc()).all()
+        
+        print(f"[DEBUG-FIX] Bulunan ilaç kullanımı sayısı: {len(ilac_kullanimlari)}")
+        
+        # İlaç kayıtlarını tank ID'lerine göre grupla
+        ilac_gruplari = {}
+        if ilac_kullanimlari:
+            # Yeni kayıt formatı (tank_id sütunu) kullanarak gruplayalım
+            ilac_gruplari = IlacKullanim.grup_kayitlari(ilac_kullanimlari)
+            print(f"[DEBUG-GRUP] İlaç kullanımları {len(ilac_kullanimlari)} kayıttan {len(ilac_gruplari)} gruba ayrıldı")
+            
+            # Grupları logla
+            for grup_id, grup in ilac_gruplari.items():
+                print(f"[DEBUG-GRUP] Grup: {grup_id}, Tarih: {format_turkiye_saati(grup['tarih'])}, " + 
+                      f"Bağ: {grup['bag_adi']}, Su: {grup['su_miktari']} lt, " + 
+                      f"İlaç Sayısı: {len(grup['ilaclar'])}")
+        
+        # Gübre kullanımları - tarih aralığı filtrelemesi 
+        gubre_kullanimlari = GubreKullanim.query.filter(
+            GubreKullanim.tarih >= baslangic,
+            GubreKullanim.tarih <= bitis
+        ).order_by(GubreKullanim.tarih.desc()).all()
+        
+        print(f"[DEBUG-FIX] Bulunan gübre kullanımı sayısı: {len(gubre_kullanimlari)}")
+            
+    except Exception as e:
+        print(f"[ERROR-FIX] Veritabanı sorgusunda hata: {str(e)}")
+        ilac_kullanimlari = []
+        ilac_gruplari = {}
+        gubre_kullanimlari = []
+    
+    # Boş veri kontrolü ve hata durumunda veri oluşturma
+    ilac_veri_var = len(ilac_kullanimlari) > 0
+    gubre_veri_var = len(gubre_kullanimlari) > 0
+    veri_var = ilac_veri_var or gubre_veri_var
+    
+    # Debug amaçlı log
+    print(f"[DEBUG-FIX] Veri var mı: {veri_var}, İlaç: {len(ilac_kullanimlari)}, Gübre: {len(gubre_kullanimlari)}")
+    
+    # Hiçbir kayıt bulunamadıysa, kullanıcı için bilgilendirici mesaj oluştur
+    if not veri_var:
+        print("[DEBUG-FIX] Seçilen tarih aralığında veri bulunamadı, hata mesajı oluşturuluyor.")
+    
+    # Sayfaya aktar
+    return render_template(
+        'rapor.html',
+        rapor_turu=rapor_turu,
+        baslangic=baslangic,
+        bitis=bitis,
+        ilac_kullanimlari=ilac_kullanimlari,
+        ilac_gruplari=ilac_gruplari,
+        gubre_kullanimlari=gubre_kullanimlari,
+        veri_var=veri_var
+    )
+
+# ----- YEDEKLEME -----
+@app.route('/yedekleme')
+def yedekleme():
+    return render_template('yedekleme.html')
+
+@app.route('/yedekle', methods=['POST'])
+def yedekle():
+    veri_turu = request.form.get('veri_turu', 'hepsi')
+    format_turu = request.form.get('format', 'json')
+    
+    data = {}
+    
+    if veri_turu in ['hepsi', 'ilaclar']:
+        ilaclar = Ilac.query.order_by(Ilac.ad).all()
+        data['ilaclar'] = [{
+            'id': ilac.id,
+            'ad': ilac.ad,
+            'etken_madde': ilac.etken_madde,
+            'hedef_hastalik': ilac.hedef_hastalik,
+            'miktar': ilac.miktar,
+            'birim': ilac.birim,
+            'dozaj': ilac.dozaj,
+            'adet': ilac.adet,
+            'ambalaj_miktari': ilac.ambalaj_miktari,
+            'ambalaj_birimi': ilac.ambalaj_birimi,
+            'olusturma_tarihi': ilac.olusturma_tarihi.isoformat() if ilac.olusturma_tarihi else None
+        } for ilac in ilaclar]
+        
+        ilac_kullanimlari = IlacKullanim.query.all()
+        data['ilac_kullanimlari'] = [{
+            'id': kullanim.id,
+            'ilac_id': kullanim.ilac_id,
+            'ilac_adi': kullanim.ilac.ad,
+            'bag_id': kullanim.bag_id,
+            'bag_adi': kullanim.bag.ad if kullanim.bag else None,
+            'kullanilan_miktar': kullanim.kullanilan_miktar,
+            'su_miktari': kullanim.su_miktari,
+            'tarih': kullanim.tarih.isoformat() if kullanim.tarih else None
+        } for kullanim in ilac_kullanimlari]
+    
+    if veri_turu in ['hepsi', 'gubreler']:
+        gubreler = Gubre.query.all()
+        data['gubreler'] = [{
+            'id': gubre.id,
+            'ad': gubre.ad,
+            'formulasyon': gubre.formulasyon,
+            'miktar': gubre.miktar,
+            'birim': gubre.birim,
+            'kullanim_alani': gubre.kullanim_alani,
+            'uygulama_dozu': gubre.uygulama_dozu,
+            'not_bilgisi': gubre.not_bilgisi,
+            'olusturma_tarihi': gubre.olusturma_tarihi.isoformat() if gubre.olusturma_tarihi else None
+        } for gubre in gubreler]
+        
+        gubre_kullanimlari = GubreKullanim.query.all()
+        data['gubre_kullanimlari'] = [{
+            'id': kullanim.id,
+            'gubre_id': kullanim.gubre_id,
+            'gubre_adi': kullanim.gubre.ad,
+            'bag_id': kullanim.bag_id,
+            'bag_adi': kullanim.bag.ad if kullanim.bag else None,
+            'kullanilan_miktar': kullanim.kullanilan_miktar,
+            'alan': kullanim.alan,
+            'tarih': kullanim.tarih.isoformat() if kullanim.tarih else None
+        } for kullanim in gubre_kullanimlari]
+    
+    # JSON formatına çevir
+    json_data = json.dumps(data, ensure_ascii=False, indent=4)
+    
+    if format_turu == 'json':
+        # JSON dosyası olarak indir
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'tarim_stok_yedek_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
+            mimetype='application/json'
+        )
+    else:
+        # TXT dosyası olarak indir
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'tarim_stok_yedek_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.txt',
+            mimetype='text/plain'
+        )
+
+# İlaç veritabanı dosyasını kontrol et
+def check_pesticides_file():
+    # data klasörünü kontrol et
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    
+    # Zirai ilaç veritabanı dosyaları
+    zirai_file_paths = ['data/zirailacliste.json', 'data/ilaclar_autocomplete.json']
+    
+    # Dosyalar yoksa oluştur
+    for zirai_file_path in zirai_file_paths:
+        if not os.path.exists(zirai_file_path):
+            # Bu durumda boş bir liste oluştur, uygulama hata vermez
+            with open(zirai_file_path, 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+
+# Zirai ilaç listesi için endpoint (doğrudan yerel dosyadan okur)
+@app.route('/api/zirai-ilaclar', methods=['GET'])
+def api_zirai_ilaclar():
+    # Tarayıcı önbelleğini tamamen devre dışı bırakmak için timestamp oluşturun
+    timestamp = int(time.time())
+    requested_timestamp = request.args.get('_')
+    
+    # Dosyadan okuma işlemi
+    try:
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            zirai_ilaclar = json.load(f)
+            response = jsonify(zirai_ilaclar)
+            
+            # Önbellek sorununu önlemek için güçlü başlıklar
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            response.headers['ETag'] = f'W/"{timestamp}"'
+            response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            response.headers['X-Timestamp'] = str(timestamp)
+            
+            # Debug log için
+            print(f"Dosyadan ilaclar alındı: {len(zirai_ilaclar)} ilaç, istek timestamp: {requested_timestamp}, yanıt timestamp: {timestamp}")
+            
+            return response
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Zirai ilaçlar dosyası hatası: {str(e)}")
+        response = jsonify([])
+        
+        # Hata durumunda da önbelleği devre dışı bırak
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        
+        return response
+        
+# Zirai ilaç arama API'si
+@app.route('/api/zirai-ilaclar/search', methods=['GET'])
+def api_zirai_ilaclar_search():
+    query = request.args.get('query', '').lower()
+    timestamp = int(time.time())
+    requested_timestamp = request.args.get('_')
+    
+    if not query or len(query) < 2:
+        response = jsonify([])
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        return response
+    
+    try:
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            zirai_ilaclar = json.load(f)
+            
+            # İsimlerde arama yap
+            sonuclar = []
+            for ilac in zirai_ilaclar:
+                ilac_adi = ilac.get('ilac_adi', '')
+                if ilac_adi and query in ilac_adi.lower():
+                    # Eksik alanları kontrol et
+                    if ilac.get('dozaj') is None:
+                        ilac['dozaj'] = '0'
+                    if ilac.get('etken_madde') is None:
+                        ilac['etken_madde'] = ''
+                    if ilac.get('hastalik') is None:
+                        ilac['hastalik'] = ''
+                    sonuclar.append(ilac)
+            
+            # En fazla 10 sonuç göster
+            response = jsonify(sonuclar[:10])
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            response.headers['ETag'] = f'W/"{timestamp}"'
+            response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            response.headers['X-Timestamp'] = str(timestamp)
+            
+            # Debug log için
+            print(f"API: zirai-ilaclar/search, sorgu: {query}, sonuç sayısı: {len(sonuclar[:10])}, istek timestamp: {requested_timestamp}, yanıt timestamp: {timestamp}")
+            
+            return response
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"API hata: zirai-ilaclar/search, hata: {str(e)}, sorgu: {query}")
+        response = jsonify([])
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        return response
+
+# Zirai ilaç ekleme/düzenleme API'si
+@app.route('/api/zirai-ilaclar/kaydet', methods=['POST'])
+def api_zirai_ilac_kaydet():
+    data = request.get_json()
+    timestamp = int(time.time())
+    
+    if not data or not data.get('ilac_adi'):
+        return jsonify({'success': False, 'error': 'Geçersiz ilaç verisi'}), 400
+    
+    try:
+        # Mevcut ilac listesini oku
+        zirai_ilaclar = []
+        try:
+            with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+                zirai_ilaclar = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Dosya bulunamadıysa yeni bir liste oluştur
+            zirai_ilaclar = []
+        
+        # Mevcut ilaç var mı kontrol et
+        ilac_mevcut = False
+        for i, ilac in enumerate(zirai_ilaclar):
+            if ilac.get('ilac_adi') == data.get('ilac_adi'):
+                # Mevcut ilacı güncelle
+                zirai_ilaclar[i] = data
+                ilac_mevcut = True
+                break
+        
+        # Mevcut değilse listeye ekle
+        if not ilac_mevcut:
+            zirai_ilaclar.append(data)
+        
+        # Dosyaya geri yaz
+        with open('data/ilaclar_autocomplete.json', 'w', encoding='utf-8') as f:
+            json.dump(zirai_ilaclar, f, ensure_ascii=False, indent=4)
+        
+        # Zirailacliste.json dosyasını da güncelle (eğer kullanılıyorsa)
+        try:
+            zirai_tam_liste = []
+            try:
+                with open('data/zirailacliste.json', 'r', encoding='utf-8') as f:
+                    zirai_tam_liste = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                zirai_tam_liste = []
+            
+            # Tam listede ilacı ara ve güncelle/ekle
+            ilac_tam_listede = False
+            for i, ilac in enumerate(zirai_tam_liste):
+                if ilac.get('ilac_adi') == data.get('ilac_adi'):
+                    zirai_tam_liste[i] = data
+                    ilac_tam_listede = True
+                    break
+            
+            if not ilac_tam_listede:
+                zirai_tam_liste.append(data)
+            
+            with open('data/zirailacliste.json', 'w', encoding='utf-8') as f:
+                json.dump(zirai_tam_liste, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            # zirailacliste.json dosyasını güncelleme hatası önemli değil
+            print(f"zirailacliste.json güncelleme hatası: {e}")
+        
+        # Debug log için
+        print(f"API: zirai-ilaclar/kaydet, ilaç: {data.get('ilac_adi')}, işlem: {'güncelleme' if ilac_mevcut else 'ekleme'}, timestamp: {timestamp}")
+        
+        # Önbellek kontrolü yapan başlıklar ekle
+        response = jsonify({'success': True, 'timestamp': timestamp})
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        return response
+    except Exception as e:
+        print(f"API hata: zirai-ilaclar/kaydet, hata: {str(e)}")
+        response = jsonify({
+            'success': False, 
+            'error': str(e), 
+            'timestamp': timestamp
+        })
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        return response, 500
+
+# ----- BAĞ YÖNETİMİ -----
+@app.route('/baglar', methods=['GET', 'POST'])
+def baglar():
+    if request.method == 'POST':
+        # Yeni bağ ekleme
+        ad = request.form['ad']
+        alan = float(request.form['alan'])
+        aciklama = request.form.get('aciklama', '')
+        ekim_tipi = request.form.get('ekim_tipi', '')
+        gps_koordinat = request.form.get('gps_koordinat', '')
+        aktif = 'aktif' in request.form  # Checkbox kontrolü
+        
+        yeni_bag = Bag(
+            ad=ad,
+            alan=alan,
+            aciklama=aciklama,
+            ekim_tipi=ekim_tipi,
+            gps_koordinat=gps_koordinat,
+            aktif=aktif
+        )
+        
+        db.session.add(yeni_bag)
+        db.session.commit()
+        
+        # JSON dosyasına da kaydet
+        Bag.json_dosyasina_kaydet()
+        
+        flash(f'{ad} bağı başarıyla eklendi.', 'success')
+        return redirect(url_for('baglar'))
+    
+    # Tüm bağları getir (sadece aktif olanlar seçeneği ekle)
+    sadece_aktif = request.args.get('sadece_aktif', 'true')
+    
+    if sadece_aktif == 'true':
+        baglar = Bag.query.filter_by(aktif=True).all()
+    else:
+        baglar = Bag.query.all()
+    
+    return render_template('bag.html', baglar=baglar, sadece_aktif=sadece_aktif)
+
+@app.route('/bag/duzenle/<int:id>', methods=['GET', 'POST'])
+def bag_duzenle(id):
+    bag = Bag.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        # Yeni değerleri al
+        bag.ad = request.form['ad']
+        bag.alan = float(request.form['alan'])
+        bag.aciklama = request.form.get('aciklama', '')
+        bag.ekim_tipi = request.form.get('ekim_tipi', '')
+        bag.gps_koordinat = request.form.get('gps_koordinat', '')
+        bag.aktif = 'aktif' in request.form  # Checkbox kontrolü
+        
+        # Veritabanına kaydet
+        db.session.commit()
+        
+        # JSON dosyasına da kaydet
+        Bag.json_dosyasina_kaydet()
+        
+        flash(f'{bag.ad} bağı başarıyla güncellendi.', 'success')
+        return redirect(url_for('baglar'))
+    
+    # GET isteği için bağ detay sayfasını göster
+    return render_template('bag_duzenle.html', bag=bag)
+
+@app.route('/bag/sil/<int:id>')
+def bag_sil(id):
+    bag = Bag.query.get_or_404(id)
+    
+    # İlgili ilaç ve gübre kullanım kayıtlarını güncelle
+    IlacKullanim.query.filter_by(bag_id=id).update({IlacKullanim.bag_id: None})
+    GubreKullanim.query.filter_by(bag_id=id).update({GubreKullanim.bag_id: None})
+    
+    # Bağı sil
+    db.session.delete(bag)
+    db.session.commit()
+    
+    # JSON dosyasını güncelle
+    Bag.json_dosyasina_kaydet()
+    
+    flash('Bağ başarıyla silindi', 'success')
+    return redirect(url_for('baglar'))
+
+@app.route('/bag/detay/<int:id>')
+def bag_detay(id):
+    bag = Bag.query.get_or_404(id)
+    
+    # Bağın ilaç ve gübre kullanımlarını al
+    ilac_kullanimlari = IlacKullanim.query.filter_by(bag_id=id).order_by(IlacKullanim.tarih.desc()).all()
+    gubre_kullanimlari = GubreKullanim.query.filter_by(bag_id=id).order_by(GubreKullanim.tarih.desc()).all()
+    
+    # İlaçlama kayıtlarını grupla (aynı tarih, saat ve tank_id'ye göre)
+    gruplu_ilaclamalar = {}
+    
+    for kullanim in ilac_kullanimlari:
+        # Tarih formatı (saat dahil)
+        tarih_str = kullanim.tarih.strftime('%Y-%m-%d %H:%M') if kullanim.tarih else "bilinmeyen_tarih"
+        tank_id = kullanim.tank_id if kullanim.tank_id else f"tank_{tarih_str}"
+        
+        # Grup anahtarı oluştur - aynı tarih ve tank için
+        grup_key = f"{tarih_str}_{tank_id}"
+        
+        if grup_key not in gruplu_ilaclamalar:
+            gruplu_ilaclamalar[grup_key] = {
+                "tarih": kullanim.tarih,
+                "ilaclar": [],
+                "toplam_su": kullanim.su_miktari,
+                "tank_id": tank_id
+            }
+            
+        # İlaç bilgilerini gruba ekle
+        gruplu_ilaclamalar[grup_key]["ilaclar"].append({
+            "ad": kullanim.ilac.ad,
+            "miktar": kullanim.kullanilan_miktar,
+            "birim": kullanim.ilac.birim,
+            "etken_madde": kullanim.ilac.etken_madde or "-"
+        })
+    
+    # İstatistikleri hesapla
+    mevcut_yil = datetime.datetime.now().year
+    
+    yillik_istatistikler = []
+    for yil in range(mevcut_yil, mevcut_yil - 5, -1):  # Son 5 yılı göster
+        ilaclama_sayisi = bag.ilaclama_sayisi(yil)
+        gubre_sayisi = bag.gubre_uygulama_sayisi(yil)
+        
+        if ilaclama_sayisi > 0 or gubre_sayisi > 0:
+            yillik_istatistikler.append({
+                'yil': yil,
+                'ilaclama_sayisi': ilaclama_sayisi,
+                'gubre_sayisi': gubre_sayisi,
+                'su_miktari': bag.toplam_su_kullanimi(yil),
+                'taral_sayisi': bag.taral_sayisi(yil)
+            })
+    
+    return render_template(
+        'bag_detay.html', 
+        bag=bag, 
+        ilac_kullanimlari=ilac_kullanimlari,  # Orijinal kayıtlar
+        gruplu_ilaclamalar=gruplu_ilaclamalar,  # Gruplandırılmış kayıtlar
+        gubre_kullanimlari=gubre_kullanimlari,
+        yillik_istatistikler=yillik_istatistikler
+    )
+
+# Bağları JSON olarak döndüren API endpoint
+@app.route('/api/baglar', methods=['GET'])
+def api_baglar():
+    try:
+        # Sadece aktif bağları getirme seçeneği
+        sadece_aktif = request.args.get('sadece_aktif', 'true') == 'true'
+        
+        # Sorgu oluştur
+        if sadece_aktif:
+            baglar = Bag.query.filter_by(aktif=True).all()
+        else:
+            baglar = Bag.query.all()
+            
+        bag_listesi = []
+        
+        for bag in baglar:
+            # Son ilaçlama ve gübreleme tarihlerini bul
+            son_ilaclama = bag.son_ilaclama()
+            son_gubre = bag.son_gubre_uygulamasi()
+            
+            bag_listesi.append({
+                'id': bag.id,
+                'ad': bag.ad,
+                'alan': bag.alan,
+                'ekim_tipi': bag.ekim_tipi,
+                'gps_koordinat': bag.gps_koordinat,
+                'aktif': bag.aktif,
+                'istatistikler': {
+                    'ilaclama_sayisi': bag.ilaclama_sayisi(),
+                    'gubre_sayisi': bag.gubre_uygulama_sayisi(),
+                    'son_ilaclama': format_turkiye_saati(son_ilaclama.tarih) if son_ilaclama else None,
+                    'son_gubre': format_turkiye_saati(son_gubre.tarih) if son_gubre else None,
+                },
+                'olusturma_tarihi': format_turkiye_saati(bag.olusturma_tarihi),
+                'son_guncelleme': format_turkiye_saati(bag.son_guncelleme) if bag.son_guncelleme else None
+            })
+        
+        response = jsonify(bag_listesi)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        return response
+    except Exception as e:
+        print(f"Bağlar API hatası: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Uygulama başlatıldığında çalıştırılacak işlemler
+@app.before_request
+def before_request():
+    # İlk istek geldiğinde çalışacak kontroller
+    if not hasattr(app, '_initial_setup_done'):
+        check_pesticides_file()
+        app._initial_setup_done = True
+        
+# ----- KULLANIM KAYITLARI API -----
+@app.route('/api/ilac-kullanim/sil/<int:kullanim_id>', methods=['POST'])
+def api_ilac_kullanim_sil(kullanim_id):
+    """
+    İlaç kullanım kaydını siler ve ilacı stoğa geri ekler
+    """
+    try:
+        kullanim = IlacKullanim.query.get_or_404(kullanim_id)
+        ilac = kullanim.ilac
+        
+        # İlaca stok geri ekleme
+        ilac.miktar += kullanim.kullanilan_miktar
+        
+        # Kullanım kaydını silme
+        db.session.delete(kullanim)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'İlaç kullanım kaydı silindi ve {kullanim.kullanilan_miktar} {ilac.birim} stoğa geri eklendi.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Hata: {str(e)}'
+        }), 500
+
+@app.route('/api/ilac-kullanim/sil-grup', methods=['POST'])
+def api_ilac_kullanim_sil_grup():
+    """
+    Belirli bir tank ID'ye sahip tüm ilaç kullanım kayıtlarını siler ve 
+    kullanılan ilaçları stoğa geri ekler.
+    """
+    try:
+        # POST body'sinden tank_id'yi al
+        data = request.get_json()
+        tank_id = data.get('tank_id')
+        
+        if not tank_id:
+            return jsonify({
+                'success': False, 
+                'message': 'Tank ID parametresi gereklidir'
+            }), 400
+        
+        # Tank ID ile tüm ilaç kullanım kayıtlarını bul
+        kullanim_kayitlari = IlacKullanim.query.filter(IlacKullanim.tank_id == tank_id).all()
+        
+        # Kayıt yoksa hata döndür
+        if len(kullanim_kayitlari) == 0:
+            return jsonify({
+                'success': False, 
+                'message': f"'{tank_id}' Tank ID ile ilişkili kayıt bulunamadı"
+            }), 404
+        
+        # İşlem kaydı için istatistikler
+        silinen_kayit_sayisi = 0
+        stok_guncellenen_ilac_sayisi = 0
+        stok_guncellenemeyen_ilac_sayisi = 0
+        toplam_geri_eklenen_miktar = {}
+        
+        # Her kayıt için ilacı stoğa geri ekle ve kaydı sil
+        for kayit in kullanim_kayitlari:
+            try:
+                if kayit.ilac_id:
+                    ilac = Ilac.query.get(kayit.ilac_id)
+                    if ilac:
+                        # İlacı stoğa geri ekle
+                        ilac.miktar += kayit.kullanilan_miktar
+                        db.session.add(ilac)
+                        stok_guncellenen_ilac_sayisi += 1
+                        
+                        # Toplam eklenen miktarı hesapla
+                        ilac_adi = ilac.ad
+                        if ilac_adi in toplam_geri_eklenen_miktar:
+                            toplam_geri_eklenen_miktar[ilac_adi][0] += kayit.kullanilan_miktar
+                        else:
+                            toplam_geri_eklenen_miktar[ilac_adi] = [kayit.kullanilan_miktar, ilac.birim]
+                    else:
+                        stok_guncellenemeyen_ilac_sayisi += 1
+                
+                # Kaydı sil
+                db.session.delete(kayit)
+                silinen_kayit_sayisi += 1
+                
+            except Exception as ilac_hatasi:
+                print(f"İlaç kaydı silinirken hata: {str(ilac_hatasi)}")
+                stok_guncellenemeyen_ilac_sayisi += 1
+        
+        # Değişiklikleri kaydet
+        db.session.commit()
+        
+        # Güncellemeleri loglama
+        stok_detaylari = ", ".join([f"{ilac_adi}: +{miktar[0]} {miktar[1]}" for ilac_adi, miktar in toplam_geri_eklenen_miktar.items()])
+        log_mesaji = (f"Tank: {tank_id} - Silinen kayıt: {silinen_kayit_sayisi}, " +
+                     f"Stok güncelleme: {stok_guncellenen_ilac_sayisi} başarılı, " +
+                     f"{stok_guncellenemeyen_ilac_sayisi} başarısız. " +
+                     f"Stoğa eklenen: {stok_detaylari}")
+        print(f"[GRUP-SİLME] {log_mesaji}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'{silinen_kayit_sayisi} kayıt başarıyla silindi ve ilaçlar stoğa geri eklendi.',
+            'silinen_kayit': silinen_kayit_sayisi,
+            'stok_guncellenen': stok_guncellenen_ilac_sayisi,
+            'stok_detaylari': toplam_geri_eklenen_miktar
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"İlaç grup silme hatası: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'message': f'Hata: {str(e)}'
+        }), 500
+
+@app.route('/api/ilac-kullanim/duzenle/<int:kullanim_id>', methods=['GET', 'POST'])
+def api_ilac_kullanim_duzenle(kullanim_id):
+    """
+    İlaç kullanım kaydını düzenler - Tekli kayıt düzenleme için 
+    (Tank sistemi ve grup düzenleme için /api/ilac-kullanim/duzenle-grup kullanılmalı)
+    
+    GET: Kayıt bilgilerini döndürür
+    POST: Kayıt bilgilerini günceller
+    """
+    kullanim = IlacKullanim.query.get_or_404(kullanim_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'success': True,
+            'kullanim': {
+                'id': kullanim.id,
+                'ilac_id': kullanim.ilac_id,
+                'ilac_adi': kullanim.ilac.ad,
+                'kullanilan_miktar': kullanim.kullanilan_miktar,
+                'su_miktari': kullanim.su_miktari,
+                'bag_id': kullanim.bag_id or '',
+                'tarih': format_turkiye_saati(kullanim.tarih, '%Y-%m-%dT%H:%M'),
+                'tank_id': kullanim.tank_id
+            }
+        })
+    else:
+        try:
+            # Eski miktarı stoğa geri ekleyelim
+            eski_miktar = kullanim.kullanilan_miktar
+            kullanim.ilac.miktar += eski_miktar
+            
+            # Formdaki verileri alalım
+            yeni_miktar = float(request.form.get('kullanilan_miktar', 0))
+            su_miktari = float(request.form.get('su_miktari', 0))
+            bag_id = request.form.get('bag_id')
+            
+            # Bağ ID'yi işleyelim
+            if bag_id and bag_id.isdigit() and int(bag_id) > 0:
+                kullanim.bag_id = int(bag_id)
+            else:
+                kullanim.bag_id = None
+            
+            # Kaydı güncelleyelim
+            kullanim.kullanilan_miktar = yeni_miktar
+            kullanim.su_miktari = su_miktari
+            
+            # Stoktan düşelim
+            kullanim.ilac.miktar -= yeni_miktar
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'İlaç kullanım kaydı güncellendi.'
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Hata: {str(e)}'
+            }), 500
+            
+@app.route('/api/ilac-kullanim/duzenle-grup/<tank_id>', methods=['GET', 'POST'])
+def api_ilac_kullanim_duzenle_grup(tank_id):
+    """
+    Tank ID'ye göre gruplandırılmış ilaç kullanım kaydını düzenler
+    
+    GET: Tank ve kayıt bilgilerini döndürür
+    POST: Tüm kayıtları günceller (Eski kayıtları silip yenilerini ekleyerek)
+    """
+    if request.method == 'GET':
+        try:
+            # Tank ID'ye göre kayıtları bulalım
+            kayitlar = IlacKullanim.query.filter_by(tank_id=tank_id).all()
+            
+            if not kayitlar:
+                return jsonify({
+                    'success': False,
+                    'message': 'Bu tank ID ile ilişkili kayıt bulunamadı.'
+                }), 404
+                
+            # Kaydın genel bilgilerini alalım (tarih, bağ, vb.)
+            ornek_kayit = kayitlar[0]
+            bag_id = ornek_kayit.bag_id
+            bag_adi = ornek_kayit.bag.ad if ornek_kayit.bag else None
+            su_miktari = ornek_kayit.su_miktari
+            tarih = ornek_kayit.tarih
+            
+            # İlaç listesini hazırlayalım
+            ilaclar = []
+            for kayit in kayitlar:
+                ilaclar.append({
+                    'id': kayit.id,
+                    'ilac_id': kayit.ilac_id,
+                    'ilac_adi': kayit.ilac.ad,
+                    'etken_madde': kayit.ilac.etken_madde,
+                    'hedef_hastalik': kayit.ilac.hedef_hastalik,
+                    'kullanilan_miktar': kayit.kullanilan_miktar,
+                    'ilac_birimi': kayit.ilac.birim,
+                    'dozaj': kayit.ilac.dozaj
+                })
+            
+            # Tüm mevcut ilaçları getir (form için)
+            tum_ilaclar = Ilac.query.order_by(Ilac.ad).all()
+            ilac_listesi = [{
+                'id': ilac.id,
+                'ad': ilac.ad,
+                'etken_madde': ilac.etken_madde,
+                'hedef_hastalik': ilac.hedef_hastalik,
+                'dozaj': ilac.dozaj,
+                'birim': ilac.birim,
+                'miktar': ilac.miktar  # Stok durumu
+            } for ilac in tum_ilaclar]
+            
+            # Tüm bağları getir (form için)
+            tum_baglar = Bag.query.filter_by(aktif=True).all()
+            bag_listesi = [{
+                'id': bag.id,
+                'ad': bag.ad,
+                'alan': bag.alan
+            } for bag in tum_baglar]
+            
+            return jsonify({
+                'success': True,
+                'tank': {
+                    'tank_id': tank_id,
+                    'tarih': format_turkiye_saati(tarih),
+                    'bag_id': bag_id,
+                    'bag_adi': bag_adi,
+                    'su_miktari': su_miktari,
+                    'ilaclar': ilaclar
+                },
+                'tum_ilaclar': ilac_listesi,
+                'tum_baglar': bag_listesi
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Hata: {str(e)}'
+            }), 500
+    else:  # POST
+        try:
+            # Önce mevcut kayıtları bulalım
+            kayitlar = IlacKullanim.query.filter_by(tank_id=tank_id).all()
+            
+            if not kayitlar:
+                return jsonify({
+                    'success': False,
+                    'message': 'Bu tank ID ile ilişkili kayıt bulunamadı.'
+                }), 404
+            
+            # POST verilerini alalım
+            data = request.json
+            
+            # Yeni tank bilgileri
+            yeni_su_miktari = float(data.get('su_miktari', 0))
+            yeni_bag_id = data.get('bag_id')
+            
+            # Uygulama tarihini al
+            uygulama_tarihi = data.get('uygulama_tarihi')
+            
+            # Tarih alanı varsa dönüştürme işlemi yap
+            if uygulama_tarihi:
+                try:
+                    # Formattan datetime nesnesine dönüştür (2025-04-11T13:45 -> datetime)
+                    uygulama_tarihi_dt = datetime.datetime.strptime(uygulama_tarihi, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    # Hata durumunda ilk kaydın tarihini kullan (veya şimdi)
+                    uygulama_tarihi_dt = kayitlar[0].tarih if kayitlar and kayitlar[0].tarih else datetime.datetime.utcnow()
+            else:
+                # Tarih yoksa ilk kaydın tarihini kullan (veya şimdi)
+                uygulama_tarihi_dt = kayitlar[0].tarih if kayitlar and kayitlar[0].tarih else datetime.datetime.utcnow()
+            
+            if yeni_bag_id and str(yeni_bag_id).isdigit():
+                yeni_bag_id = int(yeni_bag_id)
+            else:
+                yeni_bag_id = None
+                
+            # Yeni ilaçlar listesi
+            yeni_ilaclar = data.get('ilaclar', [])
+            
+            # Stok güncellemeleri için kayıt tutacağız
+            stok_degisiklikleri = []
+            
+            # Adım 1: Eski ilaçları stoğa geri ekleyelim
+            for kayit in kayitlar:
+                ilac = kayit.ilac
+                eski_miktar = kayit.kullanilan_miktar
+                
+                # Stoğa geri ekleme
+                ilac.miktar += eski_miktar
+                
+                stok_degisiklikleri.append({
+                    'ilac_id': ilac.id,
+                    'ilac_adi': ilac.ad,
+                    'eski_miktar': eski_miktar,
+                    'islem': 'iade'
+                })
+                
+                # Eski kaydı silelim
+                db.session.delete(kayit)
+            
+            # Adım 2: Yeni ilaçları ekleyelim
+            for ilac_bilgi in yeni_ilaclar:
+                ilac_id = ilac_bilgi.get('ilac_id')
+                kullanilan_miktar = float(ilac_bilgi.get('kullanilan_miktar', 0))
+                
+                if not ilac_id or kullanilan_miktar <= 0:
+                    continue
+                
+                # İlacı bulalım
+                ilac = Ilac.query.get(ilac_id)
+                if not ilac:
+                    continue
+                
+                # Stok kontrolü
+                if kullanilan_miktar > ilac.miktar:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Stokta yeterli {ilac.ad} bulunmuyor! Gereken: {kullanilan_miktar:.2f} {ilac.birim}'
+                    }), 400
+                
+                # Stoktan düşelim
+                ilac.miktar -= kullanilan_miktar
+                
+                stok_degisiklikleri.append({
+                    'ilac_id': ilac.id,
+                    'ilac_adi': ilac.ad,
+                    'yeni_miktar': kullanilan_miktar,
+                    'islem': 'kullanim'
+                })
+                
+                # Yeni kullanım kaydı oluşturalım (tarih ile birlikte)
+                yeni_kullanim = IlacKullanim(
+                    ilac_id=ilac_id,
+                    bag_id=yeni_bag_id,
+                    kullanilan_miktar=kullanilan_miktar,
+                    su_miktari=yeni_su_miktari,
+                    tank_id=tank_id,
+                    tarih=uygulama_tarihi_dt  # Uygulama tarihini ekle
+                )
+                
+                db.session.add(yeni_kullanim)
+            
+            # Değişiklikleri kaydedelim
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'İlaç kullanım kayıtları güncellendi',
+                'stok_degisiklikleri': stok_degisiklikleri
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Hata: {str(e)}'
+            }), 500
+
+@app.route('/api/gubre-kullanim/sil/<int:kullanim_id>', methods=['POST'])
+def api_gubre_kullanim_sil(kullanim_id):
+    """
+    Gübre kullanım kaydını siler ve gübreyi stoğa geri ekler
+    """
+    try:
+        kullanim = GubreKullanim.query.get_or_404(kullanim_id)
+        gubre = kullanim.gubre
+        
+        # Gübreye stok geri ekleme
+        gubre.miktar += kullanim.kullanilan_miktar
+        
+        # Kullanım kaydını silme
+        db.session.delete(kullanim)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Gübre kullanım kaydı silindi ve {kullanim.kullanilan_miktar} {gubre.birim} stoğa geri eklendi.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Hata: {str(e)}'
+        }), 500
+
+@app.route('/api/gubre-kullanim/duzenle/<int:kullanim_id>', methods=['GET', 'POST'])
+def api_gubre_kullanim_duzenle(kullanim_id):
+    """
+    Gübre kullanım kaydını düzenler
+    GET: Kayıt bilgilerini döndürür
+    POST: Kayıt bilgilerini günceller
+    """
+    kullanim = GubreKullanim.query.get_or_404(kullanim_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'success': True,
+            'kullanim': {
+                'id': kullanim.id,
+                'gubre_id': kullanim.gubre_id,
+                'gubre_adi': kullanim.gubre.ad,
+                'kullanilan_miktar': kullanim.kullanilan_miktar,
+                'alan': kullanim.alan or '',
+                'bag_id': kullanim.bag_id or '',
+                'tarih': format_turkiye_saati(kullanim.tarih, '%Y-%m-%dT%H:%M')
+            }
+        })
+    else:
+        try:
+            # Eski miktarı stoğa geri ekleyelim
+            eski_miktar = kullanim.kullanilan_miktar
+            kullanim.gubre.miktar += eski_miktar
+            
+            # Formdaki verileri alalım
+            yeni_miktar = float(request.form.get('kullanilan_miktar', 0))
+            alan = request.form.get('alan')
+            if alan and alan.strip():
+                alan = float(alan)
+            else:
+                alan = None
+            
+            bag_id = request.form.get('bag_id')
+            
+            # Bağ ID'yi işleyelim
+            if bag_id and bag_id.isdigit() and int(bag_id) > 0:
+                kullanim.bag_id = int(bag_id)
+            else:
+                kullanim.bag_id = None
+            
+            # Kaydı güncelleyelim
+            kullanim.kullanilan_miktar = yeni_miktar
+            kullanim.alan = alan
+            
+            # Stoktan düşelim
+            kullanim.gubre.miktar -= yeni_miktar
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Gübre kullanım kaydı güncellendi.'
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Hata: {str(e)}'
+            }), 500
+
+# Bağ Analizi API - Claude ve GPT-4o ile bağın durumunun analizi
+@app.route('/api/bag-analiz', methods=['POST'])
+def bag_analiz():
+    """
+    Belirli bir bağın analizi için yapay zeka kullanarak yorumlar ve öneriler oluşturur.
+    Verilen bağ ID'sine göre ilaçlama ve gübreleme geçmişini alır ve bu verileri AI modellerine gönderir.
+    """
+    try:
+        data = request.json
+        bag_id = data.get('bag_id')
+        
+        # Bağ ID'si kontrolü
+        if not bag_id:
+            return jsonify({"error": "Bağ ID'si belirtilmedi"}), 400
+            
+        # Bağ bilgilerini al
+        bag = Bag.query.get_or_404(bag_id)
+        
+        # Bağın ilaçlama ve gübreleme geçmişini al
+        ilac_kullanimlari = IlacKullanim.query.filter_by(bag_id=bag_id).order_by(IlacKullanim.tarih.desc()).all()
+        gubre_kullanimlari = GubreKullanim.query.filter_by(bag_id=bag_id).order_by(GubreKullanim.tarih.desc()).all()
+        
+        # İlaçlama geçmişini oluştur
+        ilac_gecmisi = []
+        for kullanim in ilac_kullanimlari:
+            ilac_gecmisi.append({
+                "tarih": format_turkiye_saati(kullanim.tarih),
+                "ilac_adi": kullanim.ilac.ad,
+                "ilac_etken_madde": kullanim.ilac.etken_madde,
+                "ilac_hedef": kullanim.ilac.hedef_hastalik,
+                "kullanilan_miktar": f"{kullanim.kullanilan_miktar} {kullanim.ilac.birim}",
+                "su_miktari": f"{kullanim.su_miktari} litre"
+            })
+        
+        # Gübreleme geçmişini oluştur
+        gubre_gecmisi = []
+        for kullanim in gubre_kullanimlari:
+            gubre_gecmisi.append({
+                "tarih": format_turkiye_saati(kullanim.tarih),
+                "gubre_adi": kullanim.gubre.ad,
+                "gubre_formulasyon": kullanim.gubre.formulasyon,
+                "kullanilan_miktar": f"{kullanim.kullanilan_miktar} {kullanim.gubre.birim}",
+                "uygulanan_alan": f"{kullanim.alan} m²"
+            })
+        
+        # Hata ayıklama bilgileri
+        try:
+            toplam_su = int(bag.toplam_su_kullanimi()) if bag.toplam_su_kullanimi() is not None else 0
+        except Exception as su_hatasi:
+            toplam_su = 0
+            print(f"Su kullanımı hesaplama hatası: {str(su_hatasi)}")
+            
+        # Bağ genel bilgilerini topla
+        bag_bilgileri = {
+            "ad": bag.ad,
+            "alan": f"{bag.alan} dönüm",
+            "ekim_tipi": bag.ekim_tipi,
+            "toplam_ilaclama": len(ilac_gecmisi),
+            "toplam_gubre_uygulama": len(gubre_gecmisi),
+            "son_ilaclama": ilac_gecmisi[0]["tarih"] if ilac_gecmisi else "Yok",
+            "son_gubre_uygulama": gubre_gecmisi[0]["tarih"] if gubre_gecmisi else "Yok",
+            "toplam_su_kullanimi": f"{toplam_su} litre",
+            "taral_sayisi": bag.taral_sayisi()
+        }
+        
+        # İstatistiksel veriler
+        mevcut_yil = datetime.datetime.now().year
+        istatistikler = []
+        for yil in range(mevcut_yil, mevcut_yil - 3, -1):  # Son 3 yıl için
+            yillik_ilaclama = bag.ilaclama_sayisi(yil)
+            yillik_gubre = bag.gubre_uygulama_sayisi(yil)
+            
+            if yillik_ilaclama > 0 or yillik_gubre > 0:
+                try:
+                    su_kullanimi = bag.toplam_su_kullanimi(yil)
+                    su_kullanimi_str = f"{int(su_kullanimi) if su_kullanimi is not None else 0} litre"
+                except Exception as yillik_su_hatasi:
+                    print(f"Yıllık su kullanımı hesaplama hatası: {str(yillik_su_hatasi)}")
+                    su_kullanimi_str = "0 litre"
+                    
+                istatistikler.append({
+                    "yil": yil,
+                    "ilaclama_sayisi": yillik_ilaclama,
+                    "gubre_uygulama": yillik_gubre,
+                    "su_kullanimi": su_kullanimi_str,
+                    "taral_sayisi": bag.taral_sayisi(yil)
+                })
+        
+        # 1. Adım: Claude ile analiz yapmayı dene
+        try:
+            # API anahtarı kontrolü
+            client = get_anthropic_client()
+            if not client:
+                raise Exception("Claude API anahtarı mevcut değil")
+                
+            # Claude API çağrısı
+            claude_response = client.messages.create(
+                model=CLAUDE_MODEL,  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+                max_tokens=1500,
+                temperature=0.7,
+                system="""Sen tecrübeli bir ziraat mühendisisin. Sana bir bağın detaylı bilgileri, ilaçlama ve gübreleme geçmişi verilecek. 
+                Bu bilgilere dayanarak bağın mevcut durumu, sulama ve ilaçlama alışkanlıkları hakkında uzman yorumlar yapman ve tavsiyelerde bulunman isteniyor.
+                
+                Özellikle şu konulara dikkat et:
+                1. İlaçlama sıklığı ve uygunluğu
+                2. Aynı etken maddeli ilaçların tekrar kullanılıp kullanılmadığı
+                3. Gübreleme programı ve döngüsü
+                4. Taral sayısı ve su tüketimi optimizasyonu
+                5. Mevsimsel faktörler ve iklim koşullarına uygunluk
+                
+                Yanıtında şu bölümler bulunmalı:
+                - Genel Durum: Bağın genel sağlık ve bakım durumu hakkında kısa değerlendirme
+                - İlaçlama Analizi: İlaçlama programı ve etkinliği hakkında yorum
+                - Gübreleme Analizi: Gübreleme programı ve eksiklikler
+                - Öneriler: Somut iyileştirme önerileri (zamanlama, ürün, yöntem)
+                
+                Cevabını Türkçe, anlaşılır ve bağcılık terimleriyle oluştur. Bölümleri markdown başlıkları ile ayır.
+                """,
+                messages=[
+                    {
+                        "role": "user", 
+                        "content": f"""
+# Bağ Bilgileri
+Bağ adı: {bag_bilgileri['ad']}
+Alan: {bag_bilgileri['alan']}
+Ekim tipi: {bag_bilgileri['ekim_tipi'] or 'Belirtilmemiş'}
+Toplam ilaçlama sayısı: {bag_bilgileri['toplam_ilaclama']}
+Toplam gübreleme sayısı: {bag_bilgileri['toplam_gubre_uygulama']}
+Son ilaçlama tarihi: {bag_bilgileri['son_ilaclama']}
+Son gübreleme tarihi: {bag_bilgileri['son_gubre_uygulama']}
+Toplam su kullanımı: {bag_bilgileri['toplam_su_kullanimi']}
+Taral sayısı: {bag_bilgileri['taral_sayisi']}
+
+# Yıllık İstatistikler
+{json.dumps(istatistikler, ensure_ascii=False, indent=2)}
+
+# İlaçlama Geçmişi
+{json.dumps(ilac_gecmisi, ensure_ascii=False, indent=2)}
+
+# Gübreleme Geçmişi
+{json.dumps(gubre_gecmisi, ensure_ascii=False, indent=2)}
+
+Bu verilere dayanarak bağın mevcut durumunu değerlendir, sorunları tespit et ve iyileştirme önerileri sun.
+"""
+                    }
+                ]
+            )
+            
+            # Claude yanıtını al ve döndür
+            claude_text = claude_response.content[0].text
+            
+            return jsonify({
+                "kaynak": "Claude",
+                "analiz": claude_text
+            })
+            
+        except Exception as claude_error:
+            print(f"Claude API hatası, GPT-4o'ya geçiliyor: {str(claude_error)}")
+            
+            # 2. Adım: GPT-4o ile analiz yapmayı dene
+            try:
+                # API anahtarı kontrolü
+                client = get_openai_client()
+                if not client:
+                    raise Exception("OpenAI API anahtarı mevcut değil veya bağlantı kurulamadı")
+                
+                # OpenAI API çağrısı
+                gpt_response = client.chat.completions.create(
+                    model=OPENAI_MODEL,  # En yeni model
+                    temperature=0.7,
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": """Sen tecrübeli bir ziraat mühendisisin. Sana bir bağın detaylı bilgileri, ilaçlama ve gübreleme geçmişi verilecek. 
+                            Bu bilgilere dayanarak bağın mevcut durumu, sulama ve ilaçlama alışkanlıkları hakkında uzman yorumlar yapman ve tavsiyelerde bulunman isteniyor.
+                            
+                            Özellikle şu konulara dikkat et:
+                            1. İlaçlama sıklığı ve uygunluğu
+                            2. Aynı etken maddeli ilaçların tekrar kullanılıp kullanılmadığı
+                            3. Gübreleme programı ve döngüsü
+                            4. Taral sayısı ve su tüketimi optimizasyonu
+                            5. Mevsimsel faktörler ve iklim koşullarına uygunluk
+                            
+                            Yanıtında şu bölümler bulunmalı:
+                            - Genel Durum: Bağın genel sağlık ve bakım durumu hakkında kısa değerlendirme
+                            - İlaçlama Analizi: İlaçlama programı ve etkinliği hakkında yorum
+                            - Gübreleme Analizi: Gübreleme programı ve eksiklikler
+                            - Öneriler: Somut iyileştirme önerileri (zamanlama, ürün, yöntem)
+                            
+                            Cevabını Türkçe, anlaşılır ve bağcılık terimleriyle oluştur. Bölümleri markdown başlıkları ile ayır."""
+                        },
+                        {
+                            "role": "user", 
+                            "content": f"""
+# Bağ Bilgileri
+Bağ adı: {bag_bilgileri['ad']}
+Alan: {bag_bilgileri['alan']}
+Ekim tipi: {bag_bilgileri['ekim_tipi'] or 'Belirtilmemiş'}
+Toplam ilaçlama sayısı: {bag_bilgileri['toplam_ilaclama']}
+Toplam gübreleme sayısı: {bag_bilgileri['toplam_gubre_uygulama']}
+Son ilaçlama tarihi: {bag_bilgileri['son_ilaclama']}
+Son gübreleme tarihi: {bag_bilgileri['son_gubre_uygulama']}
+Toplam su kullanımı: {bag_bilgileri['toplam_su_kullanimi']}
+Taral sayısı: {bag_bilgileri['taral_sayisi']}
+
+# Yıllık İstatistikler
+{json.dumps(istatistikler, ensure_ascii=False, indent=2)}
+
+# İlaçlama Geçmişi
+{json.dumps(ilac_gecmisi, ensure_ascii=False, indent=2)}
+
+# Gübreleme Geçmişi
+{json.dumps(gubre_gecmisi, ensure_ascii=False, indent=2)}
+
+Bu verilere dayanarak bağın mevcut durumunu değerlendir, sorunları tespit et ve iyileştirme önerileri sun.
+"""
+                        }
+                    ]
+                )
+                
+                # OpenAI yanıtını al ve döndür
+                gpt_text = gpt_response.choices[0].message.content
+                
+                return jsonify({
+                    "kaynak": "GPT-4o",
+                    "analiz": gpt_text
+                })
+                
+            except Exception as gpt_error:
+                print(f"GPT-4o API hatası: {str(gpt_error)}")
+                
+                # Her iki API de başarısız olduğunda, hata mesajı döndür
+                return jsonify({
+                    "error": "Bağ analizi yapılamadı. Claude ve GPT-4o API'leri ile bağlantı kurulamadı.",
+                    "details": str(gpt_error)
+                }), 500
+    
+    except Exception as e:
+        print(f"Bağ analizi hatası: {str(e)}")
+        return jsonify({"error": f"Bağ analizi yapılamadı: {str(e)}"}), 500
+
+# ----- KARISIM KONTROLÜ -----
+@app.route("/karisim-kontrol", methods=["GET", "POST"])
+def karisim_kontrol():
+    """
+    İlaç karışımlarının birbirleriyle uyumluluğunu yapay zeka kullanarak kontrol eder.
+    Kullanıcının girdiği ilaçları yapay zeka API'lerine gönderir ve karıştırılabilirlik analizi alır.
+    """
+    if request.method == "POST":
+        secilen_ilaclar = []
+        for i in range(1, 6):
+            ilac = request.form.get(f"ilac{i}")
+            if ilac and ilac.strip():
+                secilen_ilaclar.append(ilac.strip())
+
+        if len(secilen_ilaclar) < 2:
+            flash("Lütfen en az iki ilaç giriniz.", "warning")
+            return render_template("karisim.html", sonuc=None, ilac_listesi=get_ilac_listesi())
+
+        kombinasyon = " + ".join(secilen_ilaclar)
+        
+        prompt = f"""
+        Aşağıda verilen tarım ilaçlarının birbiriyle karıştırılabilirliğini değerlendir:
+        {kombinasyon}
+        
+        - Bu karışımın çökelme, kimyasal reaksiyon, pH uyumsuzluğu riski var mı?
+        - İçlerinden birbiriyle karıştırılmaması gereken ilaçlar var mı?
+        - Uyumsuzluk varsa hangi ikiliden kaynaklanıyor?
+        - Kullanım tavsiyesi, karıştırma sırası, sıcaklık/pH önerisi varsa belirt.
+        - Lütfen Türkçe, teknik ama sade bir dille açıkla.
+        """
+
+        # 1. Claude ile dene
+        try:
+            client = get_anthropic_client()
+            if client:
+                response = client.messages.create(
+                    model=CLAUDE_MODEL,  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+                    max_tokens=1000,
+                    temperature=0.5,
+                    system="Sen bir tarım ilaçları uzmanısın. Tarım ilaçlarının karıştırılabilirliği, kimyasal uyumluluğu, çökelme riskleri ve tank karışımları konusunda uzmansın.",
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                sonuc = response.content[0].text
+                return render_template("karisim.html", sonuc=sonuc, ilac_listesi=get_ilac_listesi(), kaynak="Claude AI")
+            else:
+                raise Exception("Claude API kullanılamıyor")
+        except Exception as claude_hatasi:
+            print(f"Claude hatası: {str(claude_hatasi)}")
+            
+            # 2. GPT-4o ile dene
+            try:
+                client = get_openai_client()
+                if client:
+                    response = client.chat.completions.create(
+                        model=OPENAI_MODEL,  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+                        temperature=0.5,
+                        messages=[
+                            {"role": "system", "content": "Sen bir tarım ilaçları uzmanısın. Tarım ilaçlarının karıştırılabilirliği, kimyasal uyumluluğu, çökelme riskleri ve tank karışımları konusunda uzmansın."},
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
+                    sonuc = response.choices[0].message.content
+                    return render_template("karisim.html", sonuc=sonuc, ilac_listesi=get_ilac_listesi(), kaynak="GPT-4o")
+                else:
+                    raise Exception("OpenAI API kullanılamıyor")
+            except Exception as openai_hatasi:
+                print(f"OpenAI hatası: {str(openai_hatasi)}")
+                
+                # 3. Perplexity araması için yönlendir
+                perplexity_url = get_perplexity_url(f"Tarım ilaçları karışımı analizi: {kombinasyon}")
+                flash("Yapay zeka servisleri kullanılamıyor, Perplexity aramasına yönlendiriliyorsunuz.", "info")
+                return redirect(perplexity_url)
+
+    # GET isteği için tüm ilaçların listesini gönder
+    return render_template("karisim.html", sonuc=None, ilac_listesi=get_ilac_listesi())
+
+def get_ilac_listesi():
+    """
+    Tüm ilaçların listesini veritabanından çeker.
+    Karışım kontrolünde otomatik tamamlama için kullanılır.
+    """
+    ilaclar = Ilac.query.order_by(Ilac.ad).all()
+    ilac_listesi = [ilac.ad for ilac in ilaclar]
+    
+    # Veritabanındaki listeyi tamamlamak için dışarıdan ilaç listesi de ekleyelim
+    try:
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            for item in data:
+                # İtem bir dictionary ise ilac_adi anahtarı kullan
+                if isinstance(item, dict) and 'ilac_adi' in item and item['ilac_adi'] and item['ilac_adi'] not in ilac_listesi:
+                    ilac_listesi.append(item['ilac_adi'])
+                # İtem bir string ise doğrudan kullan
+                elif isinstance(item, str) and item not in ilac_listesi:
+                    ilac_listesi.append(item)
+    except Exception as e:
+        print(f"İlaç listesi okuma hatası: {str(e)}")
+        # Dosya yoksa veya okuma hatası olursa varsayılan liste ekleyelim
+        varsayilan_ilaclar = [
+            "Agrimec", "Antracol", "Bellis", "Cabrio", "Cantus", "Captan", "Champion", "Coragen", 
+            "Decis", "Dithane", "Domark", "Equation Pro", "Flint", "Folpan", "Karate", "Luna", 
+            "Melody", "Milbeknock", "Movento", "Ortiva", "Polyram", "Quadris", "Ridomil", "Revus", 
+            "Score", "Switch", "Systhane", "Teldor", "Topas", "Vertimec"
+        ]
+        for ilac in varsayilan_ilaclar:
+            if ilac not in ilac_listesi:
+                ilac_listesi.append(ilac)
+        
+    # Listeyi benzersiz hale getir ve sırala
+    ilac_listesi = sorted(list(set(ilac_listesi)))
+    return ilac_listesi
+
+# Gelişmiş İlaç Analizi API - Claude, GPT-4o ve Perplexity Cascade
+@app.route('/api/ilac-analiz', methods=['POST'])
+def ilac_analiz():
+    """
+    Verilen ilaç adına göre sırasıyla Claude, OpenAI GPT-4o ve Perplexity kullanarak analiz ve açıklama yapar.
+    """
+    try:
+        data = request.json
+        ilac_adi = data.get('ilac_adi', '')
+        
+        if not ilac_adi:
+            return jsonify({"error": "İlaç adı belirtilmedi"}), 400
+            
+        # İlacı veritabanından kontrol et
+        ilac = Ilac.query.filter(Ilac.ad.ilike(f"%{ilac_adi}%")).first()
+        
+        # İlaç veritabanında varsa, bilgileri alalım
+        if ilac:
+            db_bilgileri = {
+                "etken_madde": ilac.etken_madde,
+                "hedef_hastalik": ilac.hedef_hastalik,
+                "dozaj": f"{ilac.dozaj} {ilac.birim}/100lt" if ilac.dozaj else ""
+            }
+        else:
+            db_bilgileri = {
+                "etken_madde": "",
+                "hedef_hastalik": "",
+                "dozaj": ""
+            }
+        
+        # Perplexity URL oluştur (her durumda oluştur)
+        perplexity_url = f"https://www.perplexity.ai/search/{ilac_adi}-active-ingredient"
+        
+        # 1. Adım: Claude ile analiz yapmayı dene
+        try:
+            # API anahtarı kontrolü
+            client = get_anthropic_client()
+            if not client:
+                raise Exception("Claude API anahtarı mevcut değil")
+                
+            # Claude API çağrısı
+            claude_response = client.messages.create(
+                model=CLAUDE_MODEL,  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+                max_tokens=1000,
+                temperature=0.5,
+                system="Sen tarım ilaçları konusunda uzman bir ziraat mühendisisin. Sana bir tarım ilacı adı verildi. Bu ilacın etken maddesi, kullanım amacı, dozaj bilgisi ve genel açıklamasını bulup JSON formatında ve Türkçe olarak sade bir dille açıklamalısın.",
+                messages=[
+                    {
+                        "role": "user", 
+                        "content": f"""
+İlaç: {ilac_adi}
+
+Lütfen bu ilaç hakkında detaylı araştırma yap ve aşağıdaki bilgileri içeren bir JSON nesnesi oluştur:
+
+- Etken madde
+- Kullanım amacı (hangi hastalık/zararlılara karşı)
+- Dozaj bilgisi
+- İlaçla ilgili genel açıklama
+
+Yanıtını şu JSON formatında ver:
+{{
+  "etken_madde": "İlacın etken maddesi", 
+  "kullanim_amaci": "Kullanım amacı",
+  "dozaj": "Önerilen dozaj bilgisi",
+  "aciklama": "İlaç hakkında genel açıklama"
+}}
+
+Eğer herhangi bir bilgi bulamazsan, boş string olarak bırak, "bilmiyorum" yazmak yerine ilgili alanı boş bırak.
+"""
+                    }
+                ]
+            )
+            
+            # Claude yanıtını al
+            claude_text = claude_response.content[0].text
+            
+            # JSON yanıtını parse etmeyi dene
+            try:
+                # Yanıttan JSON bölümünü çıkar (Claude bazen açıklama ekleyebiliyor)
+                import re
+                json_match = re.search(r'({[\s\S]*})', claude_text)
+                if json_match:
+                    claude_json_text = json_match.group(1)
+                    result = json.loads(claude_json_text)
+                else:
+                    # Tam bir JSON yanıtı yoksa, manuel ayırma dene
+                    if "etken_madde" in claude_text and "kullanim_amaci" in claude_text:
+                        # Manuel parsing gerekebilir, basit durumlar için boş result oluştur
+                        raise Exception("Claude yanıtı JSON formatında değil")
+                    else:
+                        raise Exception("Claude yanıtında aranılan bilgiler yok")
+                
+                # Veritabanından bilgileri varsa, Claude yanıtıyla birleştir
+                for key, value in db_bilgileri.items():
+                    if value and (not result.get(key) or not result.get(key).strip()):
+                        result[key] = value
+                
+                print(f"Claude API başarılı: JSON yanıt alındı")
+                return jsonify({"kaynak": "Claude", **result})
+            except Exception as claude_parse_error:
+                print(f"Claude JSON parse hatası, GPT-4o'ya geçiliyor: {str(claude_parse_error)}")
+                raise Exception(f"Claude yanıtı işlenemedi: {str(claude_parse_error)}")
+                
+        except Exception as claude_error:
+            print(f"Claude API hatası, GPT-4o'ya geçiliyor: {str(claude_error)}")
+            
+            # 2. Adım: GPT-4o ile analiz yapmayı dene
+            try:
+                # API anahtarı kontrolü (önce genel API anahtarı, yoksa özel anahtar)
+                client = get_openai_client()
+                if not client:
+                    # Özel anahtar ile devam et (fallback)
+                    try:
+                        client = OpenAI(
+                            api_key="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"
+                        )
+                    except Exception as key_error:
+                        raise Exception(f"OpenAI API anahtarı mevcut değil: {str(key_error)}")
+                
+                # OpenAI API çağrısı
+                gpt_response = client.chat.completions.create(
+                    model=OPENAI_MODEL,  # En yeni model
+                    temperature=0.5,
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "Sen tarım ilaçları konusunda uzman bir ziraat mühendisisin. Verilen tarım ilacının etken maddesi, kullanım amacı ve dozaj bilgisini araştırıp JSON formatında ve Türkçe olarak sade bir dille açıklaman isteniyor."
+                        },
+                        {
+                            "role": "user", 
+                            "content": f"Lütfen '{ilac_adi}' ilacının etken madde, kullanım amacı ve dozaj bilgisini analiz et ve Türkçe olarak anlat.\n\nLütfen yanıtını şu JSON formatında ver:\n{{\n  \"etken_madde\": \"İlacın etken maddesi\",\n  \"kullanim_amaci\": \"Kullanım amacı\",\n  \"dozaj\": \"Önerilen dozaj bilgisi\",\n  \"aciklama\": \"İlaç hakkında genel açıklama\"\n}}"
+                        }
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                
+                # OpenAI yanıtını al
+                gpt_text = gpt_response.choices[0].message.content
+                
+                # JSON yanıtını parse et
+                try:
+                    result = json.loads(gpt_text)
+                    
+                    # Veritabanından bilgileri varsa, GPT-4o yanıtıyla birleştir
+                    for key, value in db_bilgileri.items():
+                        if value and (not result.get(key) or not result.get(key).strip()):
+                            result[key] = value
+                    
+                    print(f"GPT-4o API başarılı: JSON yanıt alındı")
+                    return jsonify({"kaynak": "GPT-4o", **result})
+                except Exception as gpt_parse_error:
+                    print(f"GPT-4o JSON parse hatası, Perplexity'ye geçiliyor: {str(gpt_parse_error)}")
+                    raise Exception(f"GPT-4o yanıtı işlenemedi: {str(gpt_parse_error)}")
+                    
+            except Exception as gpt_error:
+                print(f"GPT-4o API hatası, Perplexity'ye geçiliyor: {str(gpt_error)}")
+                
+                # 3. Adım: Perplexity arama URL'si oluştur
+                try:
+                    # Perplexity için sorgu metni oluştur
+                    perplexity_search_query = f"{ilac_adi} tarım ilacı etken madde dozaj kullanım"
+                    
+                    # Perplexity arama URL'si oluştur
+                    perplexity_url = get_perplexity_url(perplexity_search_query)
+                    
+                    print(f"Perplexity URL oluşturuldu: {perplexity_url}")
+                    
+                    # 3.1 Adım: OpenAI ile Perplexity URL analiz etmeyi dene
+                    try:
+                        # API anahtarı kontrolü
+                        client = get_openai_client()
+                        if not client:
+                            # Özel anahtar ile devam et (fallback)
+                            try:
+                                client = OpenAI(
+                                    api_key="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"
+                                )
+                            except Exception as key_error:
+                                raise Exception(f"OpenAI API anahtarı mevcut değil: {str(key_error)}")
+                        
+                        # OpenAI API çağrısı (URL için bilgi vermeye çalış)
+                        response = client.chat.completions.create(
+                            model="gpt-4o",  # En yeni model
+                            temperature=0.5,
+                            messages=[
+                                {
+                                    "role": "system", 
+                                    "content": "Sen tarım ilaçları konusunda uzman bir ziraat mühendisisin. Sana bir tarım ilacı adı verildi. Bu ilaç hakkında bildiklerini JSON formatında ve Türkçe olarak sade bir dille açıklaman isteniyor."
+                                },
+                                {
+                                    "role": "user", 
+                                    "content": f"""
+                                    '{ilac_adi}' adlı tarım ilacı hakkında bildiklerini JSON formatında paylaşır mısın?
+                                    
+                                    Lütfen yanıtını şu JSON formatında ver:
+                                    {{
+                                      "etken_madde": "İlacın etken maddesi",
+                                      "kullanim_amaci": "Kullanım amacı (hangi hastalık/zararlılara karşı)",
+                                      "dozaj": "Önerilen dozaj bilgisi",
+                                      "aciklama": "İlaç hakkında genel açıklama"
+                                    }}
+                                    
+                                    Bilmediğin bilgileri boş string olarak bırak (null değil).
+                                    """
+                                }
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                        
+                        # OpenAI yanıtını al
+                        response_text = response.choices[0].message.content
+                        
+                        # JSON yanıtını parse et
+                        try:
+                            result = json.loads(response_text)
+                            
+                            # Veritabanından bilgileri varsa, GPT-4o yanıtıyla birleştir
+                            for key, value in db_bilgileri.items():
+                                if value and (not result.get(key) or not result.get(key).strip()):
+                                    result[key] = value
+                            
+                            # Sonuçta hiç bilgi yoksa Perplexity URL'sini ekle
+                            bos_mi = all(not result.get(k) or not result.get(k).strip() for k in ["etken_madde", "kullanim_amaci", "dozaj", "aciklama"])
+                            
+                            # Perplexity URL'sini her durumda ekle
+                            result["perplexity_url"] = perplexity_url
+                            
+                            if bos_mi:
+                                # Tüm alanlar boşsa Perplexity URL'sine yönlendir
+                                result["aciklama"] = f"Bu ilaç hakkında bilgi bulunamadı. Perplexity üzerinden araştırma yapabilirsiniz."
+                                return jsonify({"kaynak": "Perplexity+VeriTabanı", **result})
+                            else:
+                                # Bilgi varsa normal dön
+                                print(f"GPT-4o bilgi analizi başarılı: JSON yanıt alındı")
+                                return jsonify({"kaynak": "GPT4o+Perplexity", **result})
+                                
+                        except Exception as parse_error:
+                            print(f"JSON parse hatası, Perplexity URL'sine yönlendiriliyor: {str(parse_error)}")
+                            raise
+                    
+                    except Exception as openai_error:
+                        print(f"OpenAI Perplexity URL analiz hatası: {str(openai_error)}")
+                        
+                        # OpenAI hatası durumunda sadece Perplexity URL'si döndür
+                        result = db_bilgileri.copy()
+                        result["aciklama"] = f"Claude ve GPT-4o bilgi veremedi. Perplexity üzerinden detaylı bilgiye ulaşabilirsin."
+                        result["perplexity_url"] = perplexity_url
+                        
+                        return jsonify({"kaynak": "VeriTabanı+Perplexity", **result})
+                
+                except Exception as perplexity_url_error:
+                    print(f"Perplexity URL oluşturma hatası: {str(perplexity_url_error)}")
+                    
+                    # 4. Adım: OpenAI ile Perplexity URL'sini kullanarak dene
+                    try:
+                        # API anahtarı kontrolü
+                        client = get_openai_client()
+                        if not client:
+                            # Özel anahtar ile devam et (fallback)
+                            try:
+                                client = OpenAI(
+                                    api_key="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"
+                                )
+                            except Exception as key_error:
+                                raise Exception(f"OpenAI API anahtarı mevcut değil: {str(key_error)}")
+                        
+                        # Standart OpenAI API çağrısı (URL ile)
+                        response = client.chat.completions.create(
+                            model="gpt-4o",  # En yeni model
+                            temperature=0.5,
+                            messages=[
+                                {
+                                    "role": "system", 
+                                    "content": "Sen tarım ilaçları konusunda uzman bir ziraat mühendisisin. Sana bir tarım ilacı hakkında internet araması URL'si verildi. Bu URL'yi kullanarak ilacın etken maddesi, kullanım amacı ve dozaj bilgisini çıkarıp JSON formatında ve Türkçe olarak sade bir dille açıklaman isteniyor."
+                                },
+                                {
+                                    "role": "user", 
+                                    "content": f"Bu Perplexity aramasından ilacın etken madde, kullanım amacı ve dozaj bilgisini çıkar, JSON formatında ve Türkçe olarak sade anlat: {perplexity_url}\n\nİlaç: {ilac_adi}\n\nLütfen yanıtını şu JSON formatında ver:\n{{\n  \"etken_madde\": \"İlacın etken maddesi\",\n  \"kullanim_amaci\": \"Kullanım amacı\",\n  \"dozaj\": \"Önerilen dozaj bilgisi\",\n  \"aciklama\": \"İlaç hakkında genel açıklama\"\n}}"
+                                }
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                        
+                        # OpenAI yanıtını al
+                        response_text = response.choices[0].message.content
+                        
+                        # JSON yanıtını parse et
+                        try:
+                            result = json.loads(response_text)
+                            
+                            # Veritabanından bilgileri varsa, GPT-4o yanıtıyla birleştir
+                            for key, value in db_bilgileri.items():
+                                if value and (not result.get(key) or not result.get(key).strip()):
+                                    result[key] = value
+                            
+                            # Perplexity URL'sini ekle
+                            result["perplexity_url"] = perplexity_url
+                            
+                            print(f"Perplexity URL ile API başarılı: JSON yanıt alındı")
+                            return jsonify({"kaynak": "Perplexity+GPT", **result})
+                        except Exception as parse_error:
+                            print(f"JSON parse hatası, veritabanı bilgilerine dönülüyor: {str(parse_error)}")
+                            
+                            # Perplexity bağlantısını ve veritabanı bilgilerini içeren bir yanıt döndür
+                            result = db_bilgileri.copy()
+                            result["aciklama"] = f"Claude ve GPT-4o bilgi veremedi. Perplexity üzerinden detaylı bilgiye ulaşabilirsin."
+                            result["perplexity_url"] = perplexity_url
+                            
+                            return jsonify({"kaynak": "VeriTabanı+Perplexity", **result})
+                            
+                    except Exception as url_error:
+                        print(f"Tüm API'ler başarısız, son çare veritabanı: {str(url_error)}")
+                        
+                        # Tüm API'ler başarısız olursa, sadece veritabanı bilgilerini ve Perplexity bağlantısını döndür
+                        result = db_bilgileri.copy()
+                        result["aciklama"] = f"Claude ve GPT-4o bilgi veremedi. Perplexity üzerinden detaylı bilgiye ulaşabilirsin."
+                        result["perplexity_url"] = perplexity_url
+                    
+                    return jsonify({"kaynak": "VeriTabanı+Perplexity", **result})
+            
+    except Exception as e:
+        print(f"İlaç analizi hatası: {str(e)}")
+        return jsonify({"error": f"İlaç analizi yapılamadı: {str(e)}"}), 500

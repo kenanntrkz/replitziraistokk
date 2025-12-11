@@ -1,0 +1,751 @@
+import json
+import os
+import datetime
+import time
+import requests
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
+import io
+from app import app, db
+from models import Ilac, Gubre, IlacKullanim, GubreKullanim
+
+# Global template context processor
+@app.context_processor
+def inject_now():
+    return {'now': datetime.datetime.now()}
+
+# Ana sayfa
+@app.route('/')
+def index():
+    # İlaç stok uyarısı kontrolü (1200 litre eşdeğeri altında olanlar)
+    ilaclar = Ilac.query.all()
+    ilac_uyarilar = []
+    
+    for ilac in ilaclar:
+        if ilac.miktar * 100 / ilac.dozaj < 1200:  # 100 litre için dozaj değerini kullanarak hesapla
+            ilac_uyarilar.append(ilac)
+    
+    return render_template('index.html', ilac_uyarilar=ilac_uyarilar)
+
+# ----- İLAÇ YÖNETİMİ -----
+@app.route('/ilaclar', methods=['GET', 'POST'])
+def ilaclar():
+    if request.method == 'POST':
+        # Yeni ilaç ekleme
+        ad = request.form['ad']
+        etken_madde = request.form['etken_madde']
+        hedef_hastalik = request.form['hedef_hastalik']
+        miktar = float(request.form['miktar'])
+        birim = request.form['birim']
+        dozaj = float(request.form['dozaj'])
+        kaydet_json = 'kaydet_json' in request.form
+        
+        yeni_ilac = Ilac(
+            ad=ad,
+            etken_madde=etken_madde,
+            hedef_hastalik=hedef_hastalik,
+            miktar=miktar,
+            birim=birim,
+            dozaj=dozaj
+        )
+        
+        db.session.add(yeni_ilac)
+        db.session.commit()
+        
+        # İlacı JSON dosyasına da kaydet
+        if kaydet_json:
+            try:
+                # JSON formatında ilaç verisi oluştur
+                ilac_json = {
+                    "ad": ad,
+                    "etken_madde": etken_madde,
+                    "hedef_hastalik": hedef_hastalik,
+                    "dozaj": dozaj,
+                    "birim": birim,
+                    "miktar": miktar
+                }
+                
+                # API sunucusu üzerinden JSON veritabanını güncelle
+                response = requests.post('http://0.0.0.0:3000/api/ilaclar', json=ilac_json, timeout=3)
+                
+                if response.status_code == 200:
+                    print(f"İlaç ekleme: '{ad}' başarıyla JSON'a eklendi/güncellendi (API üzerinden).")
+                    flash(f'{ad} ilacı başarıyla eklendi ve JSON veritabanına kaydedildi.', 'success')
+                else:
+                    print(f"İlaç ekleme API hatası: {response.text}")
+                    flash(f'{ad} ilacı eklendi ancak JSON kayıt hatası: API yanıt kodu {response.status_code}', 'warning')
+                    
+            except Exception as e:
+                print(f"İlaç ekleme JSON hatası: {str(e)}")
+                flash(f'{ad} ilacı eklendi ancak JSON kayıt hatası: {str(e)}', 'warning')
+        else:
+            flash(f'{ad} ilacı başarıyla eklendi.', 'success')
+        
+        return redirect(url_for('ilaclar'))
+    
+    # Tüm ilaçları getir
+    ilaclar = Ilac.query.all()
+    
+    # Her istekte en güncel verileri almak için zaman damgası oluşturalım
+    timestamp = int(time.time())
+    
+    # API sunucusundan veri al
+    try:
+        # API sunucusundan JSON veriyi al
+        response = requests.get('http://localhost:3000/api/ilaclar')
+        
+        if response.status_code == 200:
+            zirai_ilaclar = response.json()
+            
+            # Verileri ilac.html şablonuna uygun formata dönüştür
+            initial_ilaclar = []
+            for ilac in zirai_ilaclar:
+                # Yeni API formatı (ad ve dozaj doğrudan erişilebilir)
+                if 'ad' in ilac and 'dozaj' in ilac:
+                    initial_ilaclar.append({
+                        'ad': ilac.get('ad', ''),
+                        'etken_madde': ilac.get('etken_madde', ''),
+                        'hedef_hastalik': ilac.get('hedef_hastalik', ''),
+                        'dozaj': float(ilac.get('dozaj', 0))
+                    })
+                # Eski format desteği (ilac_adi ve dozaj_str ile)
+                elif 'ilac_adi' in ilac:
+                    # Dozaj bilgisini sayısal formata dönüştür
+                    dozaj_str = ilac.get('dozaj', '0')
+                    if dozaj_str is None:
+                        dozaj_str = '0'
+                    # Sayısal değer zaten varsa direkt kullan, string ise dönüştür
+                    if isinstance(dozaj_str, (int, float)):
+                        dozaj_value = float(dozaj_str)
+                    else:
+                        # Sadece sayısal kısmı al
+                        import re
+                        dozaj_match = re.search(r'(\d+(?:\.\d+)?)', str(dozaj_str))
+                        dozaj_value = float(dozaj_match.group(1)) if dozaj_match else 0
+                    
+                    initial_ilaclar.append({
+                        'ad': ilac.get('ilac_adi', ''),
+                        'etken_madde': ilac.get('etken_madde', ''),
+                        'hedef_hastalik': ilac.get('hastalik', ''),
+                        'dozaj': dozaj_value
+                    })
+            
+            print(f"API'den ilac listesi yüklendi: {len(initial_ilaclar)} ilaç.")
+        else:
+            print(f"API ilac listesi yükleme hatası: HTTP {response.status_code}")
+            initial_ilaclar = []
+            
+    except Exception as e:
+        print(f"API ilac listesi yükleme hatası: {e}")
+        initial_ilaclar = []
+        
+        # API hatası durumunda dosyadan yüklemeyi dene (yedek çözüm)
+        try:
+            # Dosyadan oku
+            with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+                zirai_ilaclar = json.load(f)
+                    
+            # Verileri ilac.html şablonuna uygun formata dönüştür
+            initial_ilaclar = []
+            for ilac in zirai_ilaclar:
+                # Dozaj bilgisini sayısal formata dönüştür
+                dozaj_str = ilac.get('dozaj', '0')
+                if dozaj_str is None:
+                    dozaj_str = '0'
+                # Sadece sayısal kısmı al
+                import re
+                dozaj_match = re.search(r'(\d+(?:\.\d+)?)', str(dozaj_str))
+                dozaj_value = float(dozaj_match.group(1)) if dozaj_match else 0
+                
+                initial_ilaclar.append({
+                    'ad': ilac.get('ilac_adi', '') or ilac.get('ad', ''),
+                    'etken_madde': ilac.get('etken_madde', ''),
+                    'hedef_hastalik': ilac.get('hastalik', '') or ilac.get('hedef_hastalik', ''),
+                    'dozaj': dozaj_value
+                })
+            print(f"Dosyadan ilac listesi yüklendi (yedek çözüm): {len(initial_ilaclar)} ilaç.")
+        except Exception as backup_e:
+            print(f"Dosyadan ilac listesi yükleme hatası: {backup_e}")
+            initial_ilaclar = []
+    
+    # Tarayıcı önbelleğini devre dışı bırakacak başlıkları ekleyelim
+    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+@app.route('/ilac/duzenle/<int:id>', methods=['POST'])
+def ilac_duzenle(id):
+    ilac = Ilac.query.get_or_404(id)
+    
+    # Önceki değerleri sakla
+    eski_ad = ilac.ad
+    
+    # Yeni değerleri al
+    ilac.ad = request.form['ad']
+    ilac.etken_madde = request.form['etken_madde']
+    ilac.hedef_hastalik = request.form['hedef_hastalik']
+    ilac.miktar = float(request.form['miktar'])
+    ilac.birim = request.form['birim']
+    ilac.dozaj = float(request.form['dozaj'])
+    
+    # Veritabanına kaydet
+    db.session.commit()
+    
+    # JSON'a da kaydetmek isteniyor mu?
+    kaydet_json = 'kaydet_json' in request.form
+    
+    if kaydet_json:
+        try:
+            # JSON formatında ilaç verisi oluştur
+            ilac_json = {
+                "ad": ilac.ad,
+                "etken_madde": ilac.etken_madde,
+                "hedef_hastalik": ilac.hedef_hastalik,
+                "dozaj": ilac.dozaj,
+                "birim": ilac.birim,
+                "miktar": ilac.miktar
+            }
+            
+            # API sunucusu üzerinden JSON veritabanını güncelle
+            response = requests.post('http://localhost:3000/api/ilaclar', json=ilac_json)
+            
+            if response.status_code == 200:
+                print(f"İlaç düzenleme: '{ilac.ad}' başarıyla JSON'a güncellendi (API üzerinden).")
+                flash(f'{ilac.ad} ilacı başarıyla güncellendi ve JSON veritabanında güncellendi.', 'success')
+            else:
+                print(f"İlaç düzenleme API hatası: {response.text}")
+                flash(f'{ilac.ad} ilacı güncellendi ancak JSON güncelleme hatası: API yanıt kodu {response.status_code}', 'warning')
+                
+        except Exception as e:
+            flash(f'{ilac.ad} ilacı güncellendi ancak JSON güncelleme hatası: {str(e)}', 'warning')
+    else:
+        flash(f'{ilac.ad} ilacı başarıyla güncellendi.', 'success')
+        
+    # Doğrudan /ilaclar sayfasına yönlendirmek yerine, önce bir temizleme isteği yapalım
+    response = make_response(redirect(url_for('ilaclar')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+@app.route('/ilac/sil/<int:id>', methods=['POST'])
+def ilac_sil(id):
+    ilac = Ilac.query.get_or_404(id)
+    
+    # İlacın kullanım kayıtlarını da sil
+    IlacKullanim.query.filter_by(ilac_id=id).delete()
+    
+    db.session.delete(ilac)
+    db.session.commit()
+    flash('İlaç başarıyla silindi', 'success')
+    return redirect(url_for('ilaclar'))
+
+# ----- GÜBRE YÖNETİMİ -----
+@app.route('/gubreler', methods=['GET', 'POST'])
+def gubreler():
+    if request.method == 'POST':
+        # Yeni gübre ekleme
+        ad = request.form['ad']
+        formulasyon = request.form['formulasyon']
+        miktar = float(request.form['miktar'])
+        birim = request.form['birim']
+        kullanim_alani = request.form['kullanim_alani']
+        uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+        not_bilgisi = request.form['not_bilgisi']
+        
+        yeni_gubre = Gubre(
+            ad=ad,
+            formulasyon=formulasyon,
+            miktar=miktar,
+            birim=birim,
+            kullanim_alani=kullanim_alani,
+            uygulama_dozu=uygulama_dozu,
+            not_bilgisi=not_bilgisi
+        )
+        
+        db.session.add(yeni_gubre)
+        db.session.commit()
+        flash('Gübre başarıyla eklendi', 'success')
+        return redirect(url_for('gubreler'))
+    
+    # Tüm gübreleri getir
+    gubreler = Gubre.query.all()
+    return render_template('gubre.html', gubreler=gubreler)
+
+@app.route('/gubre/duzenle/<int:id>', methods=['POST'])
+def gubre_duzenle(id):
+    gubre = Gubre.query.get_or_404(id)
+    gubre.ad = request.form['ad']
+    gubre.formulasyon = request.form['formulasyon']
+    gubre.miktar = float(request.form['miktar'])
+    gubre.birim = request.form['birim']
+    gubre.kullanim_alani = request.form['kullanim_alani']
+    gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+    gubre.not_bilgisi = request.form['not_bilgisi']
+    
+    db.session.commit()
+    flash('Gübre başarıyla güncellendi', 'success')
+    return redirect(url_for('gubreler'))
+
+@app.route('/gubre/sil/<int:id>', methods=['POST'])
+def gubre_sil(id):
+    gubre = Gubre.query.get_or_404(id)
+    
+    # Gübrenin kullanım kayıtlarını da sil
+    GubreKullanim.query.filter_by(gubre_id=id).delete()
+    
+    db.session.delete(gubre)
+    db.session.commit()
+    flash('Gübre başarıyla silindi', 'success')
+    return redirect(url_for('gubreler'))
+
+# ----- İLAÇ KULLANIM YÖNETİMİ -----
+@app.route('/ilac-kullanim', methods=['GET', 'POST'])
+def ilac_kullanim():
+    if request.method == 'POST':
+        su_miktari = float(request.form['su_miktari'])
+        ilac_ids = request.form.getlist('ilac_ids[]')
+        
+        basarili_kayitlar = 0
+        hatalar = []
+        
+        # Her ilaç için ayrı kayıt oluştur
+        for ilac_id in ilac_ids:
+            if not ilac_id:
+                continue  # Boş seçimleri atla
+                
+            try:
+                ilac_id = int(ilac_id)
+                
+                # İlacı bulalım
+                ilac = Ilac.query.get_or_404(ilac_id)
+                
+                # Dozaj hesaplaması (100 litre suya ne kadar ilaç)
+                gereken_ilac_miktari = (su_miktari / 100) * ilac.dozaj
+                
+                # Stok kontrolü
+                if gereken_ilac_miktari > ilac.miktar:
+                    hatalar.append(f'Stokta yeterli {ilac.ad} bulunmuyor! Gereken: {gereken_ilac_miktari:.2f} {ilac.birim}')
+                    continue
+                
+                # Kullanım kaydı oluştur
+                yeni_kullanim = IlacKullanim(
+                    ilac_id=ilac_id,
+                    kullanilan_miktar=gereken_ilac_miktari,
+                    su_miktari=su_miktari
+                )
+                
+                # Stoktan düş
+                ilac.miktar -= gereken_ilac_miktari
+                
+                db.session.add(yeni_kullanim)
+                basarili_kayitlar += 1
+                
+            except Exception as e:
+                hatalar.append(f'Hata: {ilac_id} kimlikli ilaç işlenirken bir hata oluştu - {str(e)}')
+        
+        # Tüm değişiklikleri commit et
+        if basarili_kayitlar > 0:
+            db.session.commit()
+            flash(f'{basarili_kayitlar} ilaç kullanımı kaydedildi.', 'success')
+        
+        # Hataları göster
+        for hata in hatalar:
+            flash(hata, 'danger')
+            
+        return redirect(url_for('ilac_kullanim'))
+    
+    # Mevcut ilaçları getir
+    ilaclar = Ilac.query.all()
+    son_kullanimlar = IlacKullanim.query.order_by(IlacKullanim.tarih.desc()).limit(10).all()
+    
+    return render_template('ilac_kullanim.html', ilaclar=ilaclar, son_kullanimlar=son_kullanimlar)
+
+# ----- GÜBRE KULLANIM YÖNETİMİ -----
+@app.route('/gubre-kullanim', methods=['GET', 'POST'])
+def gubre_kullanim():
+    if request.method == 'POST':
+        gubre_id = int(request.form['gubre_id'])
+        kullanilan_miktar = float(request.form['kullanilan_miktar'])
+        alan = float(request.form['alan']) if request.form['alan'] else None
+        
+        # Gübreyi bulalım
+        gubre = Gubre.query.get_or_404(gubre_id)
+        
+        # Stok kontrolü
+        if kullanilan_miktar > gubre.miktar:
+            flash(f'Stokta yeterli {gubre.ad} bulunmuyor! Gereken: {kullanilan_miktar} {gubre.birim}', 'danger')
+            return redirect(url_for('gubre_kullanim'))
+        
+        # Kullanım kaydı oluştur
+        yeni_kullanim = GubreKullanim(
+            gubre_id=gubre_id,
+            kullanilan_miktar=kullanilan_miktar,
+            alan=alan
+        )
+        
+        # Stoktan düş
+        gubre.miktar -= kullanilan_miktar
+        
+        db.session.add(yeni_kullanim)
+        db.session.commit()
+        flash(f'Gübre kullanımı kaydedildi. {kullanilan_miktar} {gubre.birim} kullanıldı.', 'success')
+        return redirect(url_for('gubre_kullanim'))
+    
+    # Mevcut gübreleri getir
+    gubreler = Gubre.query.all()
+    son_kullanimlar = GubreKullanim.query.order_by(GubreKullanim.tarih.desc()).limit(10).all()
+    
+    return render_template('gubre_kullanim.html', gubreler=gubreler, son_kullanimlar=son_kullanimlar)
+
+# ----- RAPORLAR -----
+@app.route('/raporlar')
+def raporlar():
+    rapor_turu = request.args.get('rapor_turu', 'gunluk')
+    baslangic_tarih = request.args.get('baslangic_tarih')
+    bitis_tarih = request.args.get('bitis_tarih')
+    
+    # Varsayılan tarih aralıkları
+    now = datetime.datetime.now()
+    
+    if rapor_turu == 'gunluk':
+        baslangic = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        bitis = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif rapor_turu == 'aylik':
+        baslangic = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if now.month == 12:
+            bitis = now.replace(year=now.year+1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(microseconds=1)
+        else:
+            bitis = now.replace(month=now.month+1, day=1, hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(microseconds=1)
+    elif rapor_turu == 'yillik':
+        baslangic = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        bitis = now.replace(year=now.year+1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(microseconds=1)
+    else:
+        baslangic = now - datetime.timedelta(days=30)
+        bitis = now
+    
+    # Özel tarih aralığı belirtilmişse onu kullan
+    if baslangic_tarih:
+        baslangic = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
+    if bitis_tarih:
+        bitis = datetime.datetime.strptime(bitis_tarih, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    
+    # İlaç kullanımları
+    ilac_kullanimlari = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= baslangic,
+        IlacKullanim.tarih <= bitis
+    ).order_by(IlacKullanim.tarih.desc()).all()
+    
+    # Gübre kullanımları
+    gubre_kullanimlari = GubreKullanim.query.filter(
+        GubreKullanim.tarih >= baslangic,
+        GubreKullanim.tarih <= bitis
+    ).order_by(GubreKullanim.tarih.desc()).all()
+    
+    return render_template(
+        'rapor.html',
+        rapor_turu=rapor_turu,
+        baslangic=baslangic,
+        bitis=bitis,
+        ilac_kullanimlari=ilac_kullanimlari,
+        gubre_kullanimlari=gubre_kullanimlari
+    )
+
+# ----- YEDEKLEME -----
+@app.route('/yedekleme')
+def yedekleme():
+    return render_template('yedekleme.html')
+
+@app.route('/yedekle', methods=['POST'])
+def yedekle():
+    veri_turu = request.form.get('veri_turu', 'hepsi')
+    format_turu = request.form.get('format', 'json')
+    
+    data = {}
+    
+    if veri_turu in ['hepsi', 'ilaclar']:
+        ilaclar = Ilac.query.all()
+        data['ilaclar'] = [{
+            'id': ilac.id,
+            'ad': ilac.ad,
+            'etken_madde': ilac.etken_madde,
+            'hedef_hastalik': ilac.hedef_hastalik,
+            'miktar': ilac.miktar,
+            'birim': ilac.birim,
+            'dozaj': ilac.dozaj,
+            'olusturma_tarihi': ilac.olusturma_tarihi.isoformat() if ilac.olusturma_tarihi else None
+        } for ilac in ilaclar]
+        
+        ilac_kullanimlari = IlacKullanim.query.all()
+        data['ilac_kullanimlari'] = [{
+            'id': kullanim.id,
+            'ilac_id': kullanim.ilac_id,
+            'ilac_adi': kullanim.ilac.ad,
+            'kullanilan_miktar': kullanim.kullanilan_miktar,
+            'su_miktari': kullanim.su_miktari,
+            'tarih': kullanim.tarih.isoformat() if kullanim.tarih else None
+        } for kullanim in ilac_kullanimlari]
+    
+    if veri_turu in ['hepsi', 'gubreler']:
+        gubreler = Gubre.query.all()
+        data['gubreler'] = [{
+            'id': gubre.id,
+            'ad': gubre.ad,
+            'formulasyon': gubre.formulasyon,
+            'miktar': gubre.miktar,
+            'birim': gubre.birim,
+            'kullanim_alani': gubre.kullanim_alani,
+            'uygulama_dozu': gubre.uygulama_dozu,
+            'not_bilgisi': gubre.not_bilgisi,
+            'olusturma_tarihi': gubre.olusturma_tarihi.isoformat() if gubre.olusturma_tarihi else None
+        } for gubre in gubreler]
+        
+        gubre_kullanimlari = GubreKullanim.query.all()
+        data['gubre_kullanimlari'] = [{
+            'id': kullanim.id,
+            'gubre_id': kullanim.gubre_id,
+            'gubre_adi': kullanim.gubre.ad,
+            'kullanilan_miktar': kullanim.kullanilan_miktar,
+            'alan': kullanim.alan,
+            'tarih': kullanim.tarih.isoformat() if kullanim.tarih else None
+        } for kullanim in gubre_kullanimlari]
+    
+    # JSON formatına çevir
+    json_data = json.dumps(data, ensure_ascii=False, indent=4)
+    
+    if format_turu == 'json':
+        # JSON dosyası olarak indir
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'tarim_stok_yedek_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
+            mimetype='application/json'
+        )
+    else:
+        # TXT dosyası olarak indir
+        buffer = io.BytesIO()
+        buffer.write(json_data.encode('utf-8'))
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'tarim_stok_yedek_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.txt',
+            mimetype='text/plain'
+        )
+
+# İlaç veritabanı dosyasını kontrol et
+def check_pesticides_file():
+    # data klasörünü kontrol et
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    
+    # Zirai ilaç veritabanı dosyaları
+    zirai_file_paths = ['data/zirailacliste.json', 'data/ilaclar_autocomplete.json']
+    
+    # Dosyalar yoksa oluştur
+    for zirai_file_path in zirai_file_paths:
+        if not os.path.exists(zirai_file_path):
+            # Bu durumda boş bir liste oluştur, uygulama hata vermez
+            with open(zirai_file_path, 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+
+# Zirai ilaç listesi için API endpoint
+@app.route('/api/zirai-ilaclar', methods=['GET'])
+def api_zirai_ilaclar():
+    # Tarayıcı önbelleğini tamamen devre dışı bırakmak için ETag ve timestamp oluşturun
+    timestamp = int(time.time())
+    requested_timestamp = request.args.get('_')
+    
+    try:
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            zirai_ilaclar = json.load(f)
+            response = jsonify(zirai_ilaclar)
+            
+            # Önbellek sorununu önlemek için güçlü başlıklar
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            response.headers['ETag'] = f'W/"{timestamp}"'
+            response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            response.headers['X-Timestamp'] = str(timestamp)  # Özel timestamp başlığı
+            
+            # Debug log için
+            print(f"API: zirai-ilaclar, ilaç sayısı: {len(zirai_ilaclar)}, istek timestamp: {requested_timestamp}, yanıt timestamp: {timestamp}")
+            
+            return response
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"API hata: zirai-ilaclar, hata: {str(e)}")
+        response = jsonify([])
+        
+        # Hata durumunda da önbelleği devre dışı bırak
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        
+        return response
+        
+# Zirai ilaç arama API'si
+@app.route('/api/zirai-ilaclar/search', methods=['GET'])
+def api_zirai_ilaclar_search():
+    query = request.args.get('query', '').lower()
+    timestamp = int(time.time())
+    requested_timestamp = request.args.get('_')
+    
+    if not query or len(query) < 2:
+        response = jsonify([])
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        return response
+    
+    try:
+        with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+            zirai_ilaclar = json.load(f)
+            
+            # İsimlerde arama yap
+            sonuclar = []
+            for ilac in zirai_ilaclar:
+                ilac_adi = ilac.get('ilac_adi', '')
+                if ilac_adi and query in ilac_adi.lower():
+                    # Eksik alanları kontrol et
+                    if ilac.get('dozaj') is None:
+                        ilac['dozaj'] = '0'
+                    if ilac.get('etken_madde') is None:
+                        ilac['etken_madde'] = ''
+                    if ilac.get('hastalik') is None:
+                        ilac['hastalik'] = ''
+                    sonuclar.append(ilac)
+            
+            # En fazla 10 sonuç göster
+            response = jsonify(sonuclar[:10])
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            response.headers['ETag'] = f'W/"{timestamp}"'
+            response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            response.headers['X-Timestamp'] = str(timestamp)
+            
+            # Debug log için
+            print(f"API: zirai-ilaclar/search, sorgu: {query}, sonuç sayısı: {len(sonuclar[:10])}, istek timestamp: {requested_timestamp}, yanıt timestamp: {timestamp}")
+            
+            return response
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"API hata: zirai-ilaclar/search, hata: {str(e)}, sorgu: {query}")
+        response = jsonify([])
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        return response
+
+# Zirai ilaç ekleme/düzenleme API'si
+@app.route('/api/zirai-ilaclar/kaydet', methods=['POST'])
+def api_zirai_ilac_kaydet():
+    data = request.get_json()
+    timestamp = int(time.time())
+    
+    if not data or not data.get('ilac_adi'):
+        return jsonify({'success': False, 'error': 'Geçersiz ilaç verisi'}), 400
+    
+    try:
+        # Mevcut ilac listesini oku
+        zirai_ilaclar = []
+        try:
+            with open('data/ilaclar_autocomplete.json', 'r', encoding='utf-8') as f:
+                zirai_ilaclar = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Dosya bulunamadıysa yeni bir liste oluştur
+            zirai_ilaclar = []
+        
+        # Mevcut ilaç var mı kontrol et
+        ilac_mevcut = False
+        for i, ilac in enumerate(zirai_ilaclar):
+            if ilac.get('ilac_adi') == data.get('ilac_adi'):
+                # Mevcut ilacı güncelle
+                zirai_ilaclar[i] = data
+                ilac_mevcut = True
+                break
+        
+        # Mevcut değilse listeye ekle
+        if not ilac_mevcut:
+            zirai_ilaclar.append(data)
+        
+        # Dosyaya geri yaz
+        with open('data/ilaclar_autocomplete.json', 'w', encoding='utf-8') as f:
+            json.dump(zirai_ilaclar, f, ensure_ascii=False, indent=4)
+        
+        # Zirailacliste.json dosyasını da güncelle (eğer kullanılıyorsa)
+        try:
+            zirai_tam_liste = []
+            try:
+                with open('data/zirailacliste.json', 'r', encoding='utf-8') as f:
+                    zirai_tam_liste = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                zirai_tam_liste = []
+            
+            # Tam listede ilacı ara ve güncelle/ekle
+            ilac_tam_listede = False
+            for i, ilac in enumerate(zirai_tam_liste):
+                if ilac.get('ilac_adi') == data.get('ilac_adi'):
+                    zirai_tam_liste[i] = data
+                    ilac_tam_listede = True
+                    break
+            
+            if not ilac_tam_listede:
+                zirai_tam_liste.append(data)
+            
+            with open('data/zirailacliste.json', 'w', encoding='utf-8') as f:
+                json.dump(zirai_tam_liste, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            # zirailacliste.json dosyasını güncelleme hatası önemli değil
+            print(f"zirailacliste.json güncelleme hatası: {e}")
+        
+        # Debug log için
+        print(f"API: zirai-ilaclar/kaydet, ilaç: {data.get('ilac_adi')}, işlem: {'güncelleme' if ilac_mevcut else 'ekleme'}, timestamp: {timestamp}")
+        
+        # Önbellek kontrolü yapan başlıklar ekle
+        response = jsonify({'success': True, 'timestamp': timestamp})
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['ETag'] = f'W/"{timestamp}"'
+        response.headers['Last-Modified'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        response.headers['X-Timestamp'] = str(timestamp)
+        return response
+    except Exception as e:
+        print(f"API hata: zirai-ilaclar/kaydet, hata: {str(e)}")
+        response = jsonify({
+            'success': False, 
+            'error': str(e), 
+            'timestamp': timestamp
+        })
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        response.headers['X-Timestamp'] = str(timestamp)
+        response.headers['X-Error'] = str(e)
+        return response, 500
+
+# Uygulama başlatıldığında çalıştırılacak işlemler
+@app.before_request
+def before_request():
+    # İlk istek geldiğinde çalışacak kontroller
+    if not hasattr(app, '_initial_setup_done'):
+        check_pesticides_file()
+        app._initial_setup_done = True
