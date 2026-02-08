@@ -1,0 +1,84 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">
+            <i class="fas fa-tractor"></i> Tarım İlaç ve Gübre Stok Takip Sistemi
+        </h1>
+        <p class="lead">Bu sistem tarım ilaçları ve gübrelerinin stok takibini kolaylaştırır.</p>
+    </div>
+</div>
+
+{% if ilac_uyarilar %}
+<div class="uyari-kutusu mb-4">
+    <h5 class="text-danger">
+        <i class="fas fa-exclamation-triangle"></i> Stok Uyarıları
+    </h5>
+    <ul class="mb-0">
+        {% for ilac in ilac_uyarilar %}
+        <li>
+            <strong>{{ ilac.ad }}</strong> ilacı stok seviyesi düşük! (Kalan: {{ ilac.miktar }} {{ ilac.birim }}, 
+            1200 litre eşdeğerinin altında)
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="row mb-4 g-4">
+    <div class="col-md-4">
+        <div class="card menu-card h-100">
+            <div class="card-body">
+                <i class="fas fa-prescription-bottle menu-icon"></i>
+                <h5 class="card-title">İlaç Yönetimi</h5>
+                <p class="card-text">İlaç ekle, düzenle, stokları takip et</p>
+                <a href="{{ url_for('ilaclar') }}" class="btn btn-primary">İlaçları Yönet</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card menu-card h-100">
+            <div class="card-body">
+                <i class="fas fa-seedling menu-icon"></i>
+                <h5 class="card-title">Gübre Yönetimi</h5>
+                <p class="card-text">Gübre ekle, düzenle, stokları takip et</p>
+                <a href="{{ url_for('gubreler') }}" class="btn btn-primary">Gübreleri Yönet</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card menu-card h-100">
+            <div class="card-body">
+                <i class="fas fa-chart-bar menu-icon"></i>
+                <h5 class="card-title">Raporlar</h5>
+                <p class="card-text">Günlük, aylık ve yıllık raporları görüntüle</p>
+                <a href="{{ url_for('raporlar') }}" class="btn btn-primary">Raporları Görüntüle</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card menu-card h-100">
+            <div class="card-body">
+                <i class="fas fa-spray-can menu-icon"></i>
+                <h5 class="card-title">İlaç Kullanımı</h5>
+                <p class="card-text">İlaç kullanımı kaydı oluştur, geçmiş kullanımları görüntüle</p>
+                <a href="{{ url_for('ilac_kullanim') }}" class="btn btn-primary">İlaç Kullanımı</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card menu-card h-100">
+            <div class="card-body">
+                <i class="fas fa-hand-holding-water menu-icon"></i>
+                <h5 class="card-title">Gübre Kullanımı</h5>
+                <p class="card-text">Gübre kullanımı kaydı oluştur, geçmiş kullanımları görüntüle</p>
+                <a href="{{ url_for('gubre_kullanim') }}" class="btn btn-primary">Gübre Kullanımı</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

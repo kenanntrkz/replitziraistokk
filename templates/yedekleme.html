@@ -1,0 +1,78 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-database me-2"></i> Veri Yedekleme
+        </h1>
+        <p class="lead">Sistemdeki verileri yedekleyin ve dışa aktarın.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Veri Yedekleme</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('yedekle') }}">
+                    <div class="mb-4">
+                        <label class="form-label">Yedeklenecek Veri</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="veri_turu" id="hepsi" value="hepsi" checked>
+                            <label class="form-check-label" for="hepsi">Tüm Veriler (İlaçlar ve Gübreler)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="veri_turu" id="ilaclar" value="ilaclar">
+                            <label class="form-check-label" for="ilaclar">Sadece İlaçlar ve Kullanımları</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="veri_turu" id="gubreler" value="gubreler">
+                            <label class="form-check-label" for="gubreler">Sadece Gübreler ve Kullanımları</label>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Dosya Formatı</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format" id="json" value="json" checked>
+                            <label class="form-check-label" for="json">JSON Formatı</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format" id="txt" value="txt">
+                            <label class="form-check-label" for="txt">TXT Formatı</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Verileri Yedekle
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Yedekleme Hakkında</h5>
+            </div>
+            <div class="card-body">
+                <p><i class="fas fa-info-circle text-info"></i> Yedekleme işlemi, sistemdeki mevcut tüm ilaç ve gübre verilerini, kullanım kayıtlarıyla birlikte dışa aktarır.</p>
+                <details>
+                    <summary>Nasıl Çalışır?</summary>
+                    <div class="p-3">
+                        <ol>
+                            <li>Yedeklenecek veri türünü seçin.</li>
+                            <li>Çıktı formatını seçin (JSON veya TXT).</li>
+                            <li>"Verileri Yedekle" düğmesine tıklayın.</li>
+                            <li>Yedek dosyası otomatik olarak indirilecektir.</li>
+                        </ol>
+                    </div>
+                </details>
+                <p class="text-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Önemli:</strong> Yedek dosyalarınızı güvenli bir yerde saklayın.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
