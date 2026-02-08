@@ -3,79 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Önbellek kontrolü -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Tarım İlaç ve Gübre Stok Takip Sistemi</title>
+    <!-- Bootstrap CSS - Replit temalı -->
     <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Özel CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}?v={{ now.timestamp() | int }}">
 </head>
 <body>
+    <!-- Havalı Animasyonlu Splash Ekranı -->
     <div id="splash-screen" class="splash-overlay">
         <div class="splash-content">
             <div class="splash-icon" id="splash-icon">
                 <div class="emoji-container">🍇</div>
             </div>
+            
             <h1 class="splash-title" id="splash-title">Zirai Takip Sistemi</h1>
             <h3 class="splash-slogan" id="splash-slogan">Teknolojiyle büyüyen bağlar</h3>
             <p class="splash-developer" id="splash-developer">Uygulama Kenan TÜRKÖZ tarafından geliştirilmiştir.</p>
+            
             <div class="splash-loading">
                 <span id="loading-text">Yükleniyor</span><span id="loading-dots">.</span>
             </div>
+            
             <p class="splash-subtitle" id="splash-subtitle"></p>
         </div>
     </div>
+    
+    <!-- Karşılama Ekranı Sıfırlama Butonu (Geliştirici Testi İçin) -->
     <div id="reset-splash-btn" style="position: fixed; bottom: 10px; right: 10px; z-index: 1000; opacity: 0.3;">
         <button onclick="resetSplashScreen()" class="btn btn-sm btn-dark" title="Karşılama ekranını sıfırla">
             <i class="fas fa-redo-alt"></i>
         </button>
     </div>
+
     <style>
-        .splash-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a202c 0%,#0f172a 100%);display:flex;justify-content:center;align-items:center;z-index:9999;transition:opacity .6s ease;overflow:hidden}
-        .splash-overlay::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at center,transparent 30%,rgba(0,0,0,.6) 100%);pointer-events:none}
-        .splash-content{text-align:center;color:#fff;padding:2rem;max-width:600px;position:relative;z-index:2}
-        .splash-title{font-size:3rem;font-weight:800;margin-bottom:1.5rem;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.3);letter-spacing:.5px;opacity:0;transform:scale(.8);animation:titleAnimation .8s ease forwards;animation-delay:.5s}
-        @keyframes titleAnimation{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
-        .splash-icon{margin:1.5rem auto;height:160px;display:flex;justify-content:center;align-items:center;animation:iconEntrance 1s cubic-bezier(.22,1,.36,1) forwards}
-        @keyframes iconEntrance{0%{transform:translateY(-50px);opacity:0}50%{transform:translateY(20px);opacity:.8}80%{transform:translateY(-10px)}100%{transform:translateY(0);opacity:1}}
-        .emoji-container{font-size:8rem;position:relative;animation:pulseIcon 2s infinite alternate;filter:drop-shadow(0 0 10px rgba(138,43,226,.4))}
-        @keyframes pulseIcon{0%{transform:scale(1);text-shadow:0 0 10px rgba(138,43,226,.2)}100%{transform:scale(1.1);text-shadow:0 0 20px rgba(138,43,226,.6)}}
-        .splash-slogan{font-size:1.6rem;margin:1.5rem 0 .5rem;color:#9ee37d;font-weight:500;letter-spacing:.3px;opacity:0;transform:scale(.9);animation:sloganAnimation .8s ease forwards;animation-delay:.8s}
-        @keyframes sloganAnimation{0%{opacity:0;transform:scale(.9) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-        .splash-developer{font-size:1.1rem;margin:1rem 0 2rem;color:#cbd5e1;font-style:italic;opacity:0;animation:glowText 1s ease forwards,developerFadeIn .8s ease forwards;animation-delay:1.2s,1.2s}
-        @keyframes glowText{0%{text-shadow:0 0 0 rgba(255,255,255,0)}50%{text-shadow:0 0 10px rgba(255,255,255,.5)}100%{text-shadow:0 0 5px rgba(255,255,255,.3)}}
-        @keyframes developerFadeIn{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
-        .splash-loading{font-size:1.2rem;color:#e2e8f0;padding:.5rem;margin:1rem 0;opacity:0;animation:fadeIn .5s ease forwards;animation-delay:1.6s}
-        @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
-        .splash-subtitle{font-size:.95rem;margin-top:1.5rem;color:#64748b;font-style:italic;height:1.2em;position:relative;overflow:hidden}
-        .splash-subtitle::after{content:'';position:absolute;right:0;top:0;height:100%;width:2px;background-color:#64748b;animation:cursor-blink .8s infinite}
-        @keyframes cursor-blink{0%,100%{opacity:0}50%{opacity:1}}
-        .splash-overlay::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at center,rgba(138,43,226,.05) 0%,transparent 40%);animation:backgroundGlow 8s infinite alternate;pointer-events:none}
-        @keyframes backgroundGlow{0%{transform:translate(0,0);opacity:.3}100%{transform:translate(-5%,-5%);opacity:.6}}
-        @media(max-width:768px){.splash-title{font-size:2rem}.splash-icon{margin:1rem auto;height:120px}.emoji-container{font-size:5rem}.splash-slogan{font-size:1.3rem}.splash-developer{font-size:.9rem}.splash-subtitle{font-size:.8rem}.splash-loading{font-size:1rem}}
+        /* Splash Screen Ana Stiller */
+        .splash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a202c 0%, #0f172a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
+            overflow: hidden;
+        }
+        
+        .splash-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none;
+        }
+        
+        .splash-content {
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            max-width: 600px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .splash-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 0.5px;
+            opacity: 0;
+            transform: scale(0.8);
+            animation: titleAnimation 0.8s ease forwards;
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes titleAnimation {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .splash-icon {
+            margin: 1.5rem auto;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: iconEntrance 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        
+        @keyframes iconEntrance {
+            0% { transform: translateY(-50px); opacity: 0; }
+            50% { transform: translateY(20px); opacity: 0.8; }
+            80% { transform: translateY(-10px); }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        .emoji-container {
+            font-size: 8rem;
+            position: relative;
+            animation: pulseIcon 2s infinite alternate;
+            filter: drop-shadow(0 0 10px rgba(138, 43, 226, 0.4));
+        }
+        
+        @keyframes pulseIcon {
+            0% { transform: scale(1); text-shadow: 0 0 10px rgba(138, 43, 226, 0.2); }
+            100% { transform: scale(1.1); text-shadow: 0 0 20px rgba(138, 43, 226, 0.6); }
+        }
+        
+        .splash-slogan {
+            font-size: 1.6rem;
+            margin: 1.5rem 0 0.5rem;
+            color: #9ee37d;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            opacity: 0;
+            transform: scale(0.9);
+            animation: sloganAnimation 0.8s ease forwards;
+            animation-delay: 0.8s;
+        }
+        
+        @keyframes sloganAnimation {
+            0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        .splash-developer {
+            font-size: 1.1rem;
+            margin: 1rem 0 2rem;
+            color: #cbd5e1;
+            font-style: italic;
+            opacity: 0;
+            animation: glowText 1s ease forwards, developerFadeIn 0.8s ease forwards;
+            animation-delay: 1.2s, 1.2s;
+        }
+        
+        @keyframes glowText {
+            0% { text-shadow: 0 0 0px rgba(255,255,255,0); }
+            50% { text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            100% { text-shadow: 0 0 5px rgba(255,255,255,0.3); }
+        }
+        
+        @keyframes developerFadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .splash-loading {
+            font-size: 1.2rem;
+            color: #e2e8f0;
+            padding: 0.5rem;
+            margin: 1rem 0;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 1.6s;
+        }
+        
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        .splash-subtitle {
+            font-size: 0.95rem;
+            margin-top: 1.5rem;
+            color: #64748b;
+            font-style: italic;
+            height: 1.2em;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .splash-subtitle::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background-color: #64748b;
+            animation: cursor-blink 0.8s infinite;
+        }
+        
+        @keyframes cursor-blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        .splash-overlay::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(138, 43, 226, 0.05) 0%, transparent 40%);
+            animation: backgroundGlow 8s infinite alternate;
+            pointer-events: none;
+        }
+        
+        @keyframes backgroundGlow {
+            0% { transform: translate(0, 0); opacity: 0.3; }
+            100% { transform: translate(-5%, -5%); opacity: 0.6; }
+        }
+        
+        @media (max-width: 768px) {
+            .splash-title { font-size: 2rem; }
+            .splash-icon { margin: 1rem auto; height: 120px; }
+            .emoji-container { font-size: 5rem; }
+            .splash-slogan { font-size: 1.3rem; }
+            .splash-developer { font-size: 0.9rem; }
+            .splash-subtitle { font-size: 0.8rem; }
+            .splash-loading { font-size: 1rem; }
+        }
     </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const splashScreen = document.getElementById('splash-screen');
             const gosterildi = sessionStorage.getItem("karsilamaGosterildi");
-            if (gosterildi) { splashScreen.style.display = 'none'; return; }
-            else { sessionStorage.setItem("karsilamaGosterildi", "true"); }
+            
+            if (gosterildi) {
+                splashScreen.style.display = 'none';
+                return;
+            } else {
+                sessionStorage.setItem("karsilamaGosterildi", "true");
+            }
+            
             let dots = ".";
             const loadingDots = document.getElementById('loading-dots');
-            const dotsInterval = setInterval(function() { if (dots.length >= 3) { dots = "."; } else { dots += "."; } loadingDots.textContent = dots; }, 400);
+            const dotsInterval = setInterval(function() {
+                if (dots.length >= 3) { dots = "."; } else { dots += "."; }
+                loadingDots.textContent = dots;
+            }, 400);
+            
             const subtitle = document.getElementById('splash-subtitle');
             const text = "Jarvis seninle...";
             let i = 0;
-            setTimeout(function() { const typingInterval = setInterval(function() { if (i < text.length) { subtitle.textContent += text.charAt(i); i++; } else { clearInterval(typingInterval); } }, 80); }, 1800);
-            setTimeout(function() { clearInterval(dotsInterval); splashScreen.style.opacity = '0'; setTimeout(function() { splashScreen.style.display = 'none'; }, 600); }, 4000);
+            
+            setTimeout(function() {
+                const typingInterval = setInterval(function() {
+                    if (i < text.length) { subtitle.textContent += text.charAt(i); i++; }
+                    else { clearInterval(typingInterval); }
+                }, 80);
+            }, 1800);
+            
+            setTimeout(function() {
+                clearInterval(dotsInterval);
+                splashScreen.style.opacity = '0';
+                setTimeout(function() { splashScreen.style.display = 'none'; }, 600);
+            }, 4000);
         });
-        function resetSplashScreen() { sessionStorage.removeItem("karsilamaGosterildi"); alert("Karşılama ekranı sıfırlandı. Sayfayı yenileyince tekrar görünecek."); }
+        
+        function resetSplashScreen() {
+            sessionStorage.removeItem("karsilamaGosterildi");
+            alert("Karşılama ekranı sıfırlandı. Sayfayı yenileyince tekrar görünecek.");
+        }
     </script>
+    
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/"><i class="fas fa-leaf me-2"></i>Tarım Stok Takip</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-leaf me-2"></i>
+                Tarım Stok Takip
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="/"><i class="fas fa-home"></i> Ana Sayfa</a></li>
@@ -91,6 +299,7 @@
             </div>
         </div>
     </nav>
+
     <div class="container my-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -102,13 +311,19 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        
         {% block content %}{% endblock %}
     </div>
+
     <footer class="bg-dark text-white py-3 mt-5">
         <div class="container text-center">
-            <p class="mb-0"><i class="fas fa-leaf me-2"></i>Tarım İlaç ve Gübre Stok Takip Sistemi &copy; {{ now.year }}</p>
+            <p class="mb-0">
+                <i class="fas fa-leaf me-2"></i>
+                Tarım İlaç ve Gübre Stok Takip Sistemi &copy; {{ now.year }}
+            </p>
         </div>
     </footer>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}?v={{ now.timestamp() | int }}"></script>

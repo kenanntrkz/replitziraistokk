@@ -1,0 +1,204 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-prescription-bottle me-2"></i> İlaç Yönetimi
+        </h1>
+        <p class="lead">İlaç ekle, düzenle ve stokları takip et.</p>
+    </div>
+</div>
+
+<!-- Yeni İlaç Ekleme Formu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni İlaç Ekle</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('ilaclar') }}" id="ilacForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="ad" class="form-label">İlaç Adı</label>
+                    <input type="text" class="form-control" id="ad" name="ad" required autocomplete="off" list="ilacListesi">
+                    <datalist id="ilacListesi">
+                        {% for ilac in initial_ilaclar %}
+                        <option value="{{ ilac.ad }}" data-etken="{{ ilac.etken_madde }}" data-hastalik="{{ ilac.hedef_hastalik }}" data-dozaj="{{ ilac.dozaj }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="etken_madde" class="form-label">Etken Madde</label>
+                    <input type="text" class="form-control" id="etken_madde" name="etken_madde">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="hedef_hastalik" class="form-label">Hedef Hastalık</label>
+                    <input type="text" class="form-control" id="hedef_hastalik" name="hedef_hastalik">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="dozaj" class="form-label">Dozaj (100 lt suya)</label>
+                    <input type="number" step="0.01" class="form-control" id="dozaj" name="dozaj" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="miktar" class="form-label">Stok Miktarı</label>
+                    <input type="number" step="0.01" class="form-control" id="miktar" name="miktar" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="birim" class="form-label">Birim</label>
+                    <select class="form-select" id="birim" name="birim" required>
+                        <option value="ml">ml</option>
+                        <option value="lt">lt</option>
+                        <option value="gr">gr</option>
+                        <option value="kg">kg</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="kaydet_json" name="kaydet_json" checked>
+                        <label class="form-check-label" for="kaydet_json">JSON veritabanına da kaydet</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> İlaç Ekle
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- İlaç Listesi -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut İlaçlar ({{ ilaclar|length }})</h5>
+    </div>
+    <div class="card-body">
+        {% if ilaclar %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>İlaç Adı</th>
+                        <th>Etken Madde</th>
+                        <th>Hedef Hastalık</th>
+                        <th>Stok</th>
+                        <th>Dozaj (100lt)</th>
+                        <th>Kalan Kapasite</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ilac in ilaclar %}
+                    <tr>
+                        <td><strong>{{ ilac.ad }}</strong></td>
+                        <td>{{ ilac.etken_madde or '-' }}</td>
+                        <td>{{ ilac.hedef_hastalik or '-' }}</td>
+                        <td>{{ ilac.miktar }} {{ ilac.birim }}</td>
+                        <td>{{ ilac.dozaj }} {{ ilac.birim }}</td>
+                        <td>
+                            {% if ilac.dozaj and ilac.dozaj > 0 %}
+                                {{ (ilac.miktar * 100 / ilac.dozaj)|round(0)|int }} lt su
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#duzenleModal{{ ilac.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('ilac_sil', id=ilac.id) }}" style="display:inline" onsubmit="return confirm('Bu ilacı silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Düzenleme Modal -->
+                    <div class="modal fade" id="duzenleModal{{ ilac.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">İlaç Düzenle: {{ ilac.ad }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('ilac_duzenle', id=ilac.id) }}">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">İlaç Adı</label>
+                                            <input type="text" class="form-control" name="ad" value="{{ ilac.ad }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Etken Madde</label>
+                                            <input type="text" class="form-control" name="etken_madde" value="{{ ilac.etken_madde or '' }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Hedef Hastalık</label>
+                                            <input type="text" class="form-control" name="hedef_hastalik" value="{{ ilac.hedef_hastalik or '' }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Stok Miktarı</label>
+                                            <input type="number" step="0.01" class="form-control" name="miktar" value="{{ ilac.miktar }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Birim</label>
+                                            <select class="form-select" name="birim" required>
+                                                <option value="ml" {% if ilac.birim == 'ml' %}selected{% endif %}>ml</option>
+                                                <option value="lt" {% if ilac.birim == 'lt' %}selected{% endif %}>lt</option>
+                                                <option value="gr" {% if ilac.birim == 'gr' %}selected{% endif %}>gr</option>
+                                                <option value="kg" {% if ilac.birim == 'kg' %}selected{% endif %}>kg</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Dozaj (100 lt suya)</label>
+                                            <input type="number" step="0.01" class="form-control" name="dozaj" value="{{ ilac.dozaj }}" required>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" name="kaydet_json" id="kaydet_json_{{ ilac.id }}" checked>
+                                            <label class="form-check-label" for="kaydet_json_{{ ilac.id }}">JSON veritabanına da kaydet</label>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz ilaç eklenmemiş. Yukarıdaki formu kullanarak ilaç ekleyebilirsiniz.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const adInput = document.getElementById('ad');
+    const etkenMaddeInput = document.getElementById('etken_madde');
+    const hedefHastalikInput = document.getElementById('hedef_hastalik');
+    const dozajInput = document.getElementById('dozaj');
+
+    // Autocomplete: İlaç seçildiğinde bilgileri doldur
+    adInput.addEventListener('change', function() {
+        const selectedOption = document.querySelector('#ilacListesi option[value="' + adInput.value + '"]');
+        if (selectedOption) {
+            etkenMaddeInput.value = selectedOption.dataset.etken || '';
+            hedefHastalikInput.value = selectedOption.dataset.hastalik || '';
+            dozajInput.value = selectedOption.dataset.dozaj || '';
+        }
+    });
+});
+</script>
+{% endblock %}

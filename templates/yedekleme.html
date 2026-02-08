@@ -33,6 +33,7 @@
                             <label class="form-check-label" for="gubreler">Sadece Gübreler ve Kullanımları</label>
                         </div>
                     </div>
+                    
                     <div class="mb-4">
                         <label class="form-label">Dosya Formatı</label>
                         <div class="form-check">
@@ -44,32 +45,39 @@
                             <label class="form-check-label" for="txt">TXT Formatı</label>
                         </div>
                     </div>
+                    
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-download"></i> Verileri Yedekle
                     </button>
                 </form>
             </div>
         </div>
+        
         <div class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">Yedekleme Hakkında</h5>
             </div>
             <div class="card-body">
-                <p><i class="fas fa-info-circle text-info"></i> Yedekleme işlemi, sistemdeki mevcut tüm ilaç ve gübre verilerini, kullanım kayıtlarıyla birlikte dışa aktarır.</p>
+                <p>
+                    <i class="fas fa-info-circle text-info"></i>
+                    Yedekleme işlemi, sistemdeki mevcut tüm ilaç ve gübre verilerini, kullanım kayıtlarıyla birlikte dışa aktarır.
+                </p>
+                
                 <details>
                     <summary>Nasıl Çalışır?</summary>
                     <div class="p-3">
                         <ol>
-                            <li>Yedeklenecek veri türünü seçin.</li>
+                            <li>Yedeklenecek veri türünü seçin (tüm veriler veya belirli bir kategori).</li>
                             <li>Çıktı formatını seçin (JSON veya TXT).</li>
                             <li>"Verileri Yedekle" düğmesine tıklayın.</li>
-                            <li>Yedek dosyası otomatik olarak indirilecektir.</li>
+                            <li>Yedek dosyası otomatik olarak bilgisayarınıza indirilecektir.</li>
                         </ol>
                     </div>
                 </details>
+                
                 <p class="text-warning mt-3">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Önemli:</strong> Yedek dosyalarınızı güvenli bir yerde saklayın.
+                    <strong>Önemli:</strong> Yedek dosyalarınızı güvenli bir yerde saklayın. Veri kaybı durumunda bu yedekler kullanılabilir.
                 </p>
             </div>
         </div>

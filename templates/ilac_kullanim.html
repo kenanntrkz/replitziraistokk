@@ -1,0 +1,126 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-spray-can me-2"></i> İlaç Kullanımı
+        </h1>
+        <p class="lead">İlaç kullanım kaydı oluştur ve geçmiş kullanımları görüntüle.</p>
+    </div>
+</div>
+
+<!-- İlaç Kullanım Formu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni İlaç Kullanımı Kaydet</h5>
+    </div>
+    <div class="card-body">
+        {% if ilaclar %}
+        <form method="POST" action="{{ url_for('ilac_kullanim') }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="su_miktari" class="form-label">Su Miktarı (Litre)</label>
+                    <input type="number" step="0.01" class="form-control" id="su_miktari" name="su_miktari" required placeholder="Örn: 400">
+                    <small class="text-muted">Kullanılan toplam su miktarını litre olarak girin</small>
+                </div>
+            </div>
+
+            <div id="ilac-secim-alani">
+                <label class="form-label">Kullanılan İlaçlar</label>
+                <div class="ilac-satir mb-2">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <select class="form-select" name="ilac_ids[]">
+                                <option value="">-- İlaç Seçin --</option>
+                                {% for ilac in ilaclar %}
+                                <option value="{{ ilac.id }}">{{ ilac.ad }} (Stok: {{ ilac.miktar }} {{ ilac.birim }}, Dozaj: {{ ilac.dozaj }} {{ ilac.birim }}/100lt)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="ilacSatiriEkle()">
+                                <i class="fas fa-plus"></i> İlaç Ekle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">
+                <i class="fas fa-save"></i> Kullanımı Kaydet
+            </button>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> Stokta ilaç bulunmuyor. Önce <a href="{{ url_for('ilaclar') }}">ilaç eklemeniz</a> gerekmektedir.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Son Kullanımlar -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İlaç Kullanımları</h5>
+    </div>
+    <div class="card-body">
+        {% if son_kullanimlar %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>İlaç</th>
+                        <th>Kullanılan Miktar</th>
+                        <th>Su Miktarı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kullanim in son_kullanimlar %}
+                    <tr>
+                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ kullanim.ilac.ad }}</td>
+                        <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.ilac.birim }}</td>
+                        <td>{{ kullanim.su_miktari }} lt</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz ilaç kullanım kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function ilacSatiriEkle() {
+    const alan = document.getElementById('ilac-secim-alani');
+    const yeniSatir = document.createElement('div');
+    yeniSatir.className = 'ilac-satir mb-2';
+    yeniSatir.innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <select class="form-select" name="ilac_ids[]">
+                    <option value="">-- İlaç Seçin --</option>
+                    {% for ilac in ilaclar %}
+                    <option value="{{ ilac.id }}">{{ ilac.ad }} (Stok: {{ ilac.miktar }} {{ ilac.birim }}, Dozaj: {{ ilac.dozaj }} {{ ilac.birim }}/100lt)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.ilac-satir').remove()">
+                    <i class="fas fa-minus"></i> Kaldır
+                </button>
+            </div>
+        </div>
+    `;
+    alan.appendChild(yeniSatir);
+}
+</script>
+{% endblock %}
