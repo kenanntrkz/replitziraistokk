@@ -19,6 +19,10 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "tarim-stok-takip-gizli-anahtar")
 
+# Oturum süresi: 30 gün (tarayıcı kapansa bile oturum açık kalır)
+from datetime import timedelta
+app.permanent_session_lifetime = timedelta(days=30)
+
 # Load environment variables for PostgreSQL
 from dotenv import load_dotenv
 load_dotenv()

@@ -1,0 +1,72 @@
+[
+    {
+        "ad": "Bordo Bulamacı",
+        "etken_madde": "Bakır Sülfat",
+        "hedef_hastalik": "Mildiyö, Külleme",
+        "dozaj": 500,
+        "birim": "gr"
+    },
+    {
+        "ad": "Kükürt",
+        "etken_madde": "Elementel Kükürt",
+        "hedef_hastalik": "Külleme, Akarlar",
+        "dozaj": 300,
+        "birim": "gr"
+    },
+    {
+        "ad": "Ridomil Gold MZ",
+        "etken_madde": "Metalaksil-M + Mankozeb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr"
+    },
+    {
+        "ad": "Topas 100 EC",
+        "etken_madde": "Penkonazol",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 25,
+        "birim": "ml"
+    },
+    {
+        "ad": "Equation Pro",
+        "etken_madde": "Famoksedon + Simoksanil",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 40,
+        "birim": "gr"
+    },
+    {
+        "ad": "Score 250 EC",
+        "etken_madde": "Difenkonazol",
+        "hedef_hastalik": "Külleme, Ölü Kol",
+        "dozaj": 30,
+        "birim": "ml"
+    },
+    {
+        "ad": "Teldor 500 SC",
+        "etken_madde": "Fenheksamid",
+        "hedef_hastalik": "Botrytis (Kurşuni Küf)",
+        "dozaj": 100,
+        "birim": "ml"
+    },
+    {
+        "ad": "Switch 62.5 WG",
+        "etken_madde": "Siprodinil + Fludioksonil",
+        "hedef_hastalik": "Botrytis, Külleme",
+        "dozaj": 80,
+        "birim": "gr"
+    },
+    {
+        "ad": "Antracol 70 WP",
+        "etken_madde": "Propineb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr"
+    },
+    {
+        "ad": "Champion 50 WP",
+        "etken_madde": "Bakır Hidroksit",
+        "hedef_hastalik": "Mildiyö, Bakteriyel Hastalıklar",
+        "dozaj": 300,
+        "birim": "gr"
+    }
+]

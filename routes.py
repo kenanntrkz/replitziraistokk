@@ -5,10 +5,53 @@ import time
 import requests
 import pytz
 import urllib.parse
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, g
+from functools import wraps
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, g, session
 import io
 from app import app, db
 from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag
+
+# --- GİRİŞ SİSTEMİ ---
+# Kullanıcı adı ve şifre .env dosyasından okunur, yoksa varsayılan değerler kullanılır
+APP_USERNAME = os.environ.get('APP_USERNAME', 'admin')
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'tarim2026')
+
+def login_required(f):
+    """Giriş yapmayan kullanıcıları login sayfasına yönlendirir."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('giris'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/giris', methods=['GET', 'POST'])
+def giris():
+    """Kullanıcı giriş sayfası."""
+    if session.get('logged_in'):
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        kullanici_adi = request.form.get('kullanici_adi', '')
+        sifre = request.form.get('sifre', '')
+
+        if kullanici_adi == APP_USERNAME and sifre == APP_PASSWORD:
+            session['logged_in'] = True
+            session['kullanici'] = kullanici_adi
+            session.permanent = True
+            flash('Başarıyla giriş yaptınız.', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Kullanıcı adı veya şifre hatalı!', 'danger')
+
+    return render_template('login.html')
+
+@app.route('/cikis')
+def cikis():
+    """Kullanıcı çıkış işlemi."""
+    session.clear()
+    flash('Başarıyla çıkış yaptınız.', 'info')
+    return redirect(url_for('giris'))
 
 # API anahtarları çevre değişkenlerinden al
 anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY')
@@ -73,6 +116,7 @@ def inject_now():
 
 # Ana sayfa
 @app.route('/')
+@login_required
 def index():
     # İlaç stok uyarısı kontrolü (1200 litre eşdeğeri altında olanlar)
     ilaclar = Ilac.query.all()
@@ -86,6 +130,7 @@ def index():
 
 # ----- İLAÇ YÖNETİMİ -----
 @app.route('/ilaclar', methods=['GET', 'POST'])
+@login_required
 def ilaclar():
     if request.method == 'POST':
         # Yeni ilaç ekleme
@@ -233,6 +278,7 @@ def ilaclar():
     return response
 
 @app.route('/ilac/duzenle/<int:id>', methods=['POST'])
+@login_required
 def ilac_duzenle(id):
     ilac = Ilac.query.get_or_404(id)
     
@@ -288,6 +334,7 @@ def ilac_duzenle(id):
     return response
 
 @app.route('/ilac/sil/<int:id>', methods=['POST'])
+@login_required
 def ilac_sil(id):
     ilac = Ilac.query.get_or_404(id)
     
@@ -301,6 +348,7 @@ def ilac_sil(id):
 
 # ----- GÜBRE YÖNETİMİ -----
 @app.route('/gubreler', methods=['GET', 'POST'])
+@login_required
 def gubreler():
     if request.method == 'POST':
         # Yeni gübre ekleme
@@ -332,6 +380,7 @@ def gubreler():
     return render_template('gubre.html', gubreler=gubreler)
 
 @app.route('/gubre/duzenle/<int:id>', methods=['POST'])
+@login_required
 def gubre_duzenle(id):
     gubre = Gubre.query.get_or_404(id)
     gubre.ad = request.form['ad']
@@ -347,6 +396,7 @@ def gubre_duzenle(id):
     return redirect(url_for('gubreler'))
 
 @app.route('/gubre/sil/<int:id>', methods=['POST'])
+@login_required
 def gubre_sil(id):
     gubre = Gubre.query.get_or_404(id)
     
@@ -360,6 +410,7 @@ def gubre_sil(id):
 
 # ----- İLAÇ KULLANIM YÖNETİMİ -----
 @app.route('/ilac-kullanim', methods=['GET', 'POST'])
+@login_required
 def ilac_kullanim():
     if request.method == 'POST':
         su_miktari = float(request.form['su_miktari'])
@@ -422,6 +473,7 @@ def ilac_kullanim():
 
 # ----- GÜBRE KULLANIM YÖNETİMİ -----
 @app.route('/gubre-kullanim', methods=['GET', 'POST'])
+@login_required
 def gubre_kullanim():
     if request.method == 'POST':
         gubre_id = int(request.form['gubre_id'])
@@ -459,6 +511,7 @@ def gubre_kullanim():
 
 # ----- RAPORLAR -----
 @app.route('/raporlar')
+@login_required
 def raporlar():
     rapor_turu = request.args.get('rapor_turu', 'gunluk')
     baslangic_tarih = request.args.get('baslangic_tarih')
@@ -512,6 +565,7 @@ def raporlar():
 
 # ----- KARISIM KONTROLÜ -----
 @app.route("/karisim-kontrol", methods=["GET", "POST"])
+@login_required
 def karisim_kontrol():
     """
     İlaç karışımlarının birbirleriyle uyumluluğunu yapay zeka kullanarak kontrol eder.
@@ -625,6 +679,7 @@ def get_ilac_listesi():
 # ----- YEDEKLEME -----
 # ----- BAĞ YÖNETİMİ -----
 @app.route('/baglar', methods=['GET', 'POST'])
+@login_required
 def baglar():
     if request.method == 'POST':
         # Yeni bağ ekleme
@@ -664,6 +719,7 @@ def baglar():
     return render_template('bag.html', baglar=baglar, sadece_aktif=sadece_aktif)
 
 @app.route('/bag/duzenle/<int:id>', methods=['GET', 'POST'])
+@login_required
 def bag_duzenle(id):
     bag = Bag.query.get_or_404(id)
     
@@ -687,6 +743,7 @@ def bag_duzenle(id):
     return render_template('bag_duzenle.html', bag=bag)
 
 @app.route('/bag/sil/<int:id>')
+@login_required
 def bag_sil(id):
     bag = Bag.query.get_or_404(id)
     db.session.delete(bag)
@@ -699,6 +756,7 @@ def bag_sil(id):
     return redirect(url_for('baglar'))
 
 @app.route('/bag/detay/<int:id>')
+@login_required
 def bag_detay(id):
     bag = Bag.query.get_or_404(id)
     
@@ -747,10 +805,12 @@ def bag_detay(id):
                         weather_data=weather_data)
 
 @app.route('/yedekleme')
+@login_required
 def yedekleme():
     return render_template('yedekleme.html')
 
 @app.route('/yedekle', methods=['POST'])
+@login_required
 def yedekle():
     veri_turu = request.form.get('veri_turu', 'hepsi')
     format_turu = request.form.get('format', 'json')
@@ -850,6 +910,7 @@ def check_pesticides_file():
 
 # Zirai ilaç listesi için API endpoint
 @app.route('/api/zirai-ilaclar', methods=['GET'])
+@login_required
 def api_zirai_ilaclar():
     # Tarayıcı önbelleğini tamamen devre dışı bırakmak için ETag ve timestamp oluşturun
     timestamp = int(time.time())
@@ -889,6 +950,7 @@ def api_zirai_ilaclar():
         
 # Zirai ilaç arama API'si
 @app.route('/api/zirai-ilaclar/search', methods=['GET'])
+@login_required
 def api_zirai_ilaclar_search():
     query = request.args.get('query', '').lower()
     timestamp = int(time.time())
@@ -949,6 +1011,7 @@ def api_zirai_ilaclar_search():
 
 # Zirai ilaç ekleme/düzenleme API'si
 @app.route('/api/zirai-ilaclar/kaydet', methods=['POST'])
+@login_required
 def api_zirai_ilac_kaydet():
     data = request.get_json()
     timestamp = int(time.time())

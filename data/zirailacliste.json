@@ -1,0 +1,402 @@
+[
+    {
+        "ad": "Bordo Bulamacı",
+        "etken_madde": "Bakır Sülfat + Kireç",
+        "hedef_hastalik": "Mildiyö, Bakteriyel Hastalıklar",
+        "dozaj": 500,
+        "birim": "gr",
+        "aciklama": "Geleneksel bakır preparatı, koruyucu amaçlı kullanılır"
+    },
+    {
+        "ad": "Ridomil Gold MZ 68 WG",
+        "etken_madde": "Metalaksil-M %4 + Mankozeb %64",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Sistemik + kontakt etkili, mildiyöye karşı etkili"
+    },
+    {
+        "ad": "Equation Pro",
+        "etken_madde": "Famoksedon %22.5 + Simoksanil %30",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 40,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı koruyucu ve tedavi edici"
+    },
+    {
+        "ad": "Topas 100 EC",
+        "etken_madde": "Penkonazol %100 g/L",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 25,
+        "birim": "ml",
+        "aciklama": "Sistemik etkili, küllemeye karşı"
+    },
+    {
+        "ad": "Score 250 EC",
+        "etken_madde": "Difenkonazol %250 g/L",
+        "hedef_hastalik": "Külleme, Ölü Kol",
+        "dozaj": 30,
+        "birim": "ml",
+        "aciklama": "Geniş spektrumlu fungisit"
+    },
+    {
+        "ad": "Teldor 500 SC",
+        "etken_madde": "Fenheksamid %500 g/L",
+        "hedef_hastalik": "Botrytis (Kurşuni Küf)",
+        "dozaj": 100,
+        "birim": "ml",
+        "aciklama": "Botrytis'e karşı spesifik etkili"
+    },
+    {
+        "ad": "Switch 62.5 WG",
+        "etken_madde": "Siprodinil %37.5 + Fludioksonil %25",
+        "hedef_hastalik": "Botrytis, Külleme",
+        "dozaj": 80,
+        "birim": "gr",
+        "aciklama": "Hasat öncesi botrytis kontrolü"
+    },
+    {
+        "ad": "Antracol 70 WP",
+        "etken_madde": "Propineb %70",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Kontakt etkili koruyucu fungisit"
+    },
+    {
+        "ad": "Champion 50 WP",
+        "etken_madde": "Bakır Hidroksit %50",
+        "hedef_hastalik": "Mildiyö, Bakteriyel Hastalıklar",
+        "dozaj": 300,
+        "birim": "gr",
+        "aciklama": "Bakır bazlı koruyucu preparat"
+    },
+    {
+        "ad": "Kükürt (Toz)",
+        "etken_madde": "Elementel Kükürt %80",
+        "hedef_hastalik": "Külleme, Akarlar",
+        "dozaj": 300,
+        "birim": "gr",
+        "aciklama": "Külleme ve akarlara karşı toz kükürt"
+    },
+    {
+        "ad": "Vivando",
+        "etken_madde": "Metrafenon %500 g/L",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 20,
+        "birim": "ml",
+        "aciklama": "Küllemeye karşı yeni nesil fungisit"
+    },
+    {
+        "ad": "Pergado MZ",
+        "etken_madde": "Mandipropamid + Mankozeb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı güçlü koruma"
+    },
+    {
+        "ad": "Quadris",
+        "etken_madde": "Azoksistrobin %250 g/L",
+        "hedef_hastalik": "Mildiyö, Külleme",
+        "dozaj": 75,
+        "birim": "ml",
+        "aciklama": "Geniş spektrumlu strobilurin grubu"
+    },
+    {
+        "ad": "Cabrio Top",
+        "etken_madde": "Piraklostrobin + Metiram",
+        "hedef_hastalik": "Mildiyö, Külleme",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "İkili etki mekanizması"
+    },
+    {
+        "ad": "Melody Duo 66.8 WP",
+        "etken_madde": "İprovalikarb + Propineb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı çift etkili"
+    },
+    {
+        "ad": "Falcon 460 EC",
+        "etken_madde": "Spiroksamin + Tebukonazol + Triadimenol",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 40,
+        "birim": "ml",
+        "aciklama": "Üçlü kombinasyon, küllemeye karşı"
+    },
+    {
+        "ad": "Revus",
+        "etken_madde": "Mandipropamid %250 g/L",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 60,
+        "birim": "ml",
+        "aciklama": "Mildiyöye karşı koruyucu"
+    },
+    {
+        "ad": "Acrobat MZ",
+        "etken_madde": "Dimetomorf + Mankozeb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı sistemik + kontakt"
+    },
+    {
+        "ad": "Signum",
+        "etken_madde": "Boskalid + Piraklostrobin",
+        "hedef_hastalik": "Botrytis, Külleme",
+        "dozaj": 150,
+        "birim": "gr",
+        "aciklama": "Geniş spektrumlu, botrytis ve külleme"
+    },
+    {
+        "ad": "Trimiltox Forte",
+        "etken_madde": "Bakır Oksiklorür + Mankozeb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 300,
+        "birim": "gr",
+        "aciklama": "Bakır + ditiyokarbamat kombinasyonu"
+    },
+    {
+        "ad": "Nativo 75 WG",
+        "etken_madde": "Trifloksistrobin + Tebukonazol",
+        "hedef_hastalik": "Külleme, Mildiyö",
+        "dozaj": 20,
+        "birim": "gr",
+        "aciklama": "Çift etkili sistemik fungisit"
+    },
+    {
+        "ad": "Electis 75 WG",
+        "etken_madde": "Zoksamid + Mankozeb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı etkili"
+    },
+    {
+        "ad": "Forum Star",
+        "etken_madde": "Dimetomorf + Bakır Oksiklorür",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı sistemik etki"
+    },
+    {
+        "ad": "Karathane Gold",
+        "etken_madde": "Meptildinokap %350 g/L",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 40,
+        "birim": "ml",
+        "aciklama": "Küllemeye karşı kontakt etkili"
+    },
+    {
+        "ad": "Luna Experience",
+        "etken_madde": "Fluopiram + Tebukonazol",
+        "hedef_hastalik": "Botrytis, Külleme",
+        "dozaj": 50,
+        "birim": "ml",
+        "aciklama": "Yeni nesil SDHI fungisit"
+    },
+    {
+        "ad": "Profiler",
+        "etken_madde": "Fluopikolid + Fosetil-Al",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı güçlü sistemik etki"
+    },
+    {
+        "ad": "Delan 700 WDG",
+        "etken_madde": "Ditianon %70",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 50,
+        "birim": "gr",
+        "aciklama": "Multi-site etkili, direnç riski düşük"
+    },
+    {
+        "ad": "Folpan 80 WDG",
+        "etken_madde": "Folpet %80",
+        "hedef_hastalik": "Mildiyö, Botrytis",
+        "dozaj": 150,
+        "birim": "gr",
+        "aciklama": "Koruyucu kontakt fungisit"
+    },
+    {
+        "ad": "Collis",
+        "etken_madde": "Boskalid + Kresoksim-metil",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 40,
+        "birim": "ml",
+        "aciklama": "Küllemeye karşı kombinasyon"
+    },
+    {
+        "ad": "Thiovit Jet",
+        "etken_madde": "Kükürt %80",
+        "hedef_hastalik": "Külleme, Akarlar",
+        "dozaj": 400,
+        "birim": "gr",
+        "aciklama": "Mikronize kükürt, külleme ve akarlara"
+    },
+    {
+        "ad": "Cuprofix Ultra 40 Disperss",
+        "etken_madde": "Bakır sülfat tribazik %40",
+        "hedef_hastalik": "Mildiyö, Bakteriyel Leke",
+        "dozaj": 400,
+        "birim": "gr",
+        "aciklama": "Bakır bazlı koruyucu"
+    },
+    {
+        "ad": "Mancozeb 80 WP",
+        "etken_madde": "Mankozeb %80",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Ditiyokarbamat grubu koruyucu"
+    },
+    {
+        "ad": "Aliette 80 WG",
+        "etken_madde": "Fosetil-Al %80",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Yukarı-aşağı sistemik fungisit"
+    },
+    {
+        "ad": "Polyram DF",
+        "etken_madde": "Metiram %70",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Çok bölgeli kontakt fungisit"
+    },
+    {
+        "ad": "Mikal Flash",
+        "etken_madde": "Fosetil-Al + Folpet",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 300,
+        "birim": "gr",
+        "aciklama": "Sistemik + kontakt kombine etki"
+    },
+    {
+        "ad": "Prosper",
+        "etken_madde": "Spiroksamin %500 g/L",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 50,
+        "birim": "ml",
+        "aciklama": "Sistemik külleme ilacı"
+    },
+    {
+        "ad": "Flint Max",
+        "etken_madde": "Trifloksistrobin + Tebukonazol",
+        "hedef_hastalik": "Külleme, Mildiyö",
+        "dozaj": 20,
+        "birim": "gr",
+        "aciklama": "Strobilurin + triazol kombinasyonu"
+    },
+    {
+        "ad": "Verita",
+        "etken_madde": "Fosetil-Al + Fenamidone",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı ikili etki"
+    },
+    {
+        "ad": "Bellis",
+        "etken_madde": "Boskalid + Piraklostrobin",
+        "hedef_hastalik": "Botrytis, Külleme",
+        "dozaj": 80,
+        "birim": "gr",
+        "aciklama": "Hasat öncesi koruma"
+    },
+    {
+        "ad": "Infinito",
+        "etken_madde": "Fluopikolid + Propamokarb",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 150,
+        "birim": "ml",
+        "aciklama": "Mildiyöye karşı sistemik"
+    },
+    {
+        "ad": "Orvego",
+        "etken_madde": "Ametoktradin + Dimetomorf",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 80,
+        "birim": "ml",
+        "aciklama": "Yeni nesil mildiyö ilacı"
+    },
+    {
+        "ad": "Enervin",
+        "etken_madde": "Ametoktradin + Metiram",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı güçlü koruma"
+    },
+    {
+        "ad": "Folicur EW 250",
+        "etken_madde": "Tebukonazol %250 g/L",
+        "hedef_hastalik": "Külleme, Pas Hastalıkları",
+        "dozaj": 40,
+        "birim": "ml",
+        "aciklama": "Triazol grubu sistemik fungisit"
+    },
+    {
+        "ad": "Kumulus DF",
+        "etken_madde": "Kükürt %80",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 500,
+        "birim": "gr",
+        "aciklama": "Toz kükürt formülasyonu"
+    },
+    {
+        "ad": "Merpan 80 WDG",
+        "etken_madde": "Kaptan %80",
+        "hedef_hastalik": "Mildiyö, Karaleke",
+        "dozaj": 200,
+        "birim": "gr",
+        "aciklama": "Geniş spektrumlu koruyucu"
+    },
+    {
+        "ad": "Systhane 20 EW",
+        "etken_madde": "Miklobutanil %200 g/L",
+        "hedef_hastalik": "Külleme",
+        "dozaj": 25,
+        "birim": "ml",
+        "aciklama": "Küllemeye karşı sistemik etki"
+    },
+    {
+        "ad": "Cantus",
+        "etken_madde": "Boskalid %50",
+        "hedef_hastalik": "Botrytis",
+        "dozaj": 120,
+        "birim": "gr",
+        "aciklama": "SDHI grubu botrytis ilacı"
+    },
+    {
+        "ad": "Karaçor",
+        "etken_madde": "Bakır Oksiklorür %50",
+        "hedef_hastalik": "Mildiyö, Bakteriyel",
+        "dozaj": 400,
+        "birim": "gr",
+        "aciklama": "Bakır bazlı geleneksel preparat"
+    },
+    {
+        "ad": "Vondozeb Plus",
+        "etken_madde": "Mankozeb %75",
+        "hedef_hastalik": "Mildiyö",
+        "dozaj": 250,
+        "birim": "gr",
+        "aciklama": "Mildiyöye karşı kontakt koruyucu"
+    },
+    {
+        "ad": "Bravo 720 SC",
+        "etken_madde": "Klorotalonil %720 g/L",
+        "hedef_hastalik": "Mildiyö, Botrytis",
+        "dozaj": 150,
+        "birim": "ml",
+        "aciklama": "Geniş spektrumlu koruyucu fungisit"
+    }
+]
