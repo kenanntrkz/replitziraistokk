@@ -1,0 +1,200 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>
+                <i class="fas fa-tree me-2"></i> {{ bag.ad }}
+                {% if bag.aktif %}
+                <span class="badge bg-success fs-6">Aktif</span>
+                {% else %}
+                <span class="badge bg-secondary fs-6">Pasif</span>
+                {% endif %}
+            </h1>
+            <div>
+                <a href="{{ url_for('bag_duzenle', id=bag.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Düzenle
+                </a>
+                <a href="{{ url_for('baglar') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Geri
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bag Bilgileri -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bag Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>Alan:</th>
+                        <td>{{ bag.alan }} dönüm</td>
+                    </tr>
+                    {% if bag.ekim_tipi %}
+                    <tr>
+                        <th>Ekim Tipi:</th>
+                        <td>{{ bag.ekim_tipi }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if bag.gps_koordinat %}
+                    <tr>
+                        <th>GPS Koordinatları:</th>
+                        <td>{{ bag.gps_koordinat }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if bag.aciklama %}
+                    <tr>
+                        <th>Açıklama:</th>
+                        <td>{{ bag.aciklama }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Olusturma Tarihi:</th>
+                        <td>{{ bag.olusturma_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% if bag.son_guncelleme %}
+                    <tr>
+                        <th>Son Güncelleme:</th>
+                        <td>{{ bag.son_guncelleme.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Istatistikler</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>Toplam Ilaçlama:</th>
+                        <td>{{ bag.ilaclama_sayisi() }} kez</td>
+                    </tr>
+                    <tr>
+                        <th>Bu Yıl Ilaçlama:</th>
+                        <td>{{ bag.ilaclama_sayisi(now.year) }} kez</td>
+                    </tr>
+                    <tr>
+                        <th>Toplam Gübreleme:</th>
+                        <td>{{ bag.gubre_uygulama_sayisi() }} kez</td>
+                    </tr>
+                    <tr>
+                        <th>Bu Yıl Gübreleme:</th>
+                        <td>{{ bag.gubre_uygulama_sayisi(now.year) }} kez</td>
+                    </tr>
+                    <tr>
+                        <th>Toplam Su Kullanımı:</th>
+                        <td>{{ bag.toplam_su_kullanimi() }} lt</td>
+                    </tr>
+                    <tr>
+                        <th>Taral Sayısı:</th>
+                        <td>{{ bag.taral_sayisi() }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ilaçlama Kayıtları -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-spray-can me-2"></i>Ilaçlama Kayıtları</h5>
+    </div>
+    <div class="card-body">
+        {% if ilac_gruplari %}
+        {% for grup in ilac_gruplari %}
+        <div class="card mb-3">
+            <div class="card-header bg-dark">
+                <strong>
+                    <i class="fas fa-calendar"></i>
+                    {% if grup.tr_tarih %}
+                        {{ grup.tr_tarih.strftime('%d.%m.%Y %H:%M') }}
+                    {% else %}
+                        {{ grup.tarih.strftime('%d.%m.%Y %H:%M') }}
+                    {% endif %}
+                </strong>
+                - Su: {{ grup.su_miktari }} lt
+                {% if grup.bag_adi %} - Bag: {{ grup.bag_adi }}{% endif %}
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ilaç</th>
+                            <th>Kullanılan Miktar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ilac in grup.ilaclar %}
+                        <tr>
+                            <td>{{ ilac.ilac.ad }}</td>
+                            <td>{{ ilac.kullanilan_miktar|round(2) }} {{ ilac.ilac.birim }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Bu bag için henüz ilaçlama kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Gübreleme Kayıtları -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-hand-holding-water me-2"></i>Gübreleme Kayıtları</h5>
+    </div>
+    <div class="card-body">
+        {% if gubrelemeler %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Gübre</th>
+                        <th>Kullanılan Miktar</th>
+                        <th>Alan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gubre in gubrelemeler %}
+                    <tr>
+                        <td>
+                            {% if gubre.tr_tarih %}
+                                {{ gubre.tr_tarih.strftime('%d.%m.%Y %H:%M') }}
+                            {% else %}
+                                {{ gubre.tarih.strftime('%d.%m.%Y %H:%M') }}
+                            {% endif %}
+                        </td>
+                        <td>{{ gubre.gubre.ad }}</td>
+                        <td>{{ gubre.kullanilan_miktar|round(2) }} {{ gubre.gubre.birim }}</td>
+                        <td>{% if gubre.alan %}{{ gubre.alan }} m2{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Bu bag için henüz gübreleme kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

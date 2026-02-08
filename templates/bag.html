@@ -1,0 +1,125 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-tree me-2"></i> Bag Yönetimi
+        </h1>
+        <p class="lead">Baglarınızı ekleyin, düzenleyin ve takip edin.</p>
+    </div>
+</div>
+
+<!-- Filtre -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('baglar', sadece_aktif='true') }}" class="btn btn-sm {% if sadece_aktif == 'true' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            <i class="fas fa-check-circle"></i> Aktif Baglar
+        </a>
+        <a href="{{ url_for('baglar', sadece_aktif='false') }}" class="btn btn-sm {% if sadece_aktif == 'false' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            <i class="fas fa-list"></i> Tüm Baglar
+        </a>
+    </div>
+</div>
+
+<!-- Yeni Bag Ekleme Formu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Bag Ekle</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('baglar') }}">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="ad" class="form-label">Bag Adı</label>
+                    <input type="text" class="form-control" id="ad" name="ad" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="alan" class="form-label">Alan (Dönüm)</label>
+                    <input type="number" step="0.01" class="form-control" id="alan" name="alan" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="ekim_tipi" class="form-label">Ekim Tipi / Üzüm Çesidi</label>
+                    <input type="text" class="form-control" id="ekim_tipi" name="ekim_tipi">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="gps_koordinat" class="form-label">GPS Koordinatları</label>
+                    <input type="text" class="form-control" id="gps_koordinat" name="gps_koordinat" placeholder="Örn: 38.123456, 27.123456">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="aciklama" class="form-label">Açıklama</label>
+                    <textarea class="form-control" id="aciklama" name="aciklama" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="aktif" name="aktif" checked>
+                <label class="form-check-label" for="aktif">Aktif</label>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Bag Ekle
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Bag Listesi -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Baglar ({{ baglar|length }})</h5>
+    </div>
+    <div class="card-body">
+        {% if baglar %}
+        <div class="row g-4">
+            {% for bag in baglar %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 {% if not bag.aktif %}border-secondary opacity-75{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tree me-1"></i> {{ bag.ad }}
+                        </h5>
+                        {% if bag.aktif %}
+                        <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pasif</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Alan:</strong> {{ bag.alan }} dönüm</p>
+                        {% if bag.ekim_tipi %}
+                        <p><strong>Ekim Tipi:</strong> {{ bag.ekim_tipi }}</p>
+                        {% endif %}
+                        {% if bag.gps_koordinat %}
+                        <p><strong>GPS:</strong> {{ bag.gps_koordinat }}</p>
+                        {% endif %}
+                        {% if bag.aciklama %}
+                        <p><strong>Açıklama:</strong> {{ bag.aciklama }}</p>
+                        {% endif %}
+                        <p class="text-muted small">
+                            <i class="fas fa-calendar"></i> {{ bag.olusturma_tarihi.strftime('%d.%m.%Y') }}
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('bag_detay', id=bag.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> Detay
+                        </a>
+                        <a href="{{ url_for('bag_duzenle', id=bag.id) }}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </a>
+                        <a href="{{ url_for('bag_sil', id=bag.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Bu bagi silmek istediginize emin misiniz?')">
+                            <i class="fas fa-trash"></i> Sil
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz bag eklenmemis. Yukarıdaki formu kullanarak bag ekleyebilirsiniz.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-seedling me-2"></i> Gübre Yönetimi
+        </h1>
+        <p class="lead">Gübre ekle, düzenle ve stokları takip et.</p>
+    </div>
+</div>
+
+<!-- Yeni Gübre Ekleme Formu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Gübre Ekle</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('gubreler') }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="ad" class="form-label">Gübre Adı</label>
+                    <input type="text" class="form-control" id="ad" name="ad" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="formulasyon" class="form-label">Formülasyon (N-P-K)</label>
+                    <input type="text" class="form-control" id="formulasyon" name="formulasyon" placeholder="Örn: 18-18-18">
+                    <button type="button" class="btn btn-sm btn-outline-info mt-1" id="gubreAciklaBtn">
+                        <i class="fas fa-robot"></i> AI ile Açıklama Al
+                    </button>
+                    <div id="gubreAciklama" class="mt-2" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="miktar" class="form-label">Stok Miktarı</label>
+                    <input type="number" step="0.01" class="form-control" id="miktar" name="miktar" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="birim" class="form-label">Birim</label>
+                    <select class="form-select" id="birim" name="birim" required>
+                        <option value="kg">kg</option>
+                        <option value="lt">lt</option>
+                        <option value="gr">gr</option>
+                        <option value="ton">ton</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="uygulama_dozu" class="form-label">Uygulama Dozu (5 dönüm için)</label>
+                    <input type="number" step="0.01" class="form-control" id="uygulama_dozu" name="uygulama_dozu">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="kullanim_alani" class="form-label">Kullanım Alanı</label>
+                    <input type="text" class="form-control" id="kullanim_alani" name="kullanim_alani">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="not_bilgisi" class="form-label">Not</label>
+                    <textarea class="form-control" id="not_bilgisi" name="not_bilgisi" rows="2"></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Gübre Ekle
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Gübre Listesi -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut Gübreler ({{ gubreler|length }})</h5>
+    </div>
+    <div class="card-body">
+        {% if gubreler %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Gübre Adı</th>
+                        <th>Formülasyon</th>
+                        <th>Stok</th>
+                        <th>Kullanım Alanı</th>
+                        <th>Uygulama Dozu</th>
+                        <th>Not</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gubre in gubreler %}
+                    <tr>
+                        <td><strong>{{ gubre.ad }}</strong></td>
+                        <td>{{ gubre.formulasyon or '-' }}</td>
+                        <td>{{ gubre.miktar }} {{ gubre.birim }}</td>
+                        <td>{{ gubre.kullanim_alani or '-' }}</td>
+                        <td>{% if gubre.uygulama_dozu %}{{ gubre.uygulama_dozu }} {{ gubre.birim }}{% else %}-{% endif %}</td>
+                        <td>{{ gubre.not_bilgisi or '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#gubreDuzenleModal{{ gubre.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('gubre_sil', id=gubre.id) }}" style="display:inline" onsubmit="return confirm('Bu gübreyi silmek istediğinize emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- Gübre Düzenleme Modal -->
+                    <div class="modal fade" id="gubreDuzenleModal{{ gubre.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Gübre Düzenle: {{ gubre.ad }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('gubre_duzenle', id=gubre.id) }}">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Gübre Adı</label>
+                                            <input type="text" class="form-control" name="ad" value="{{ gubre.ad }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Formülasyon (N-P-K)</label>
+                                            <input type="text" class="form-control" name="formulasyon" value="{{ gubre.formulasyon or '' }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Stok Miktarı</label>
+                                            <input type="number" step="0.01" class="form-control" name="miktar" value="{{ gubre.miktar }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Birim</label>
+                                            <select class="form-select" name="birim" required>
+                                                <option value="kg" {% if gubre.birim == 'kg' %}selected{% endif %}>kg</option>
+                                                <option value="lt" {% if gubre.birim == 'lt' %}selected{% endif %}>lt</option>
+                                                <option value="gr" {% if gubre.birim == 'gr' %}selected{% endif %}>gr</option>
+                                                <option value="ton" {% if gubre.birim == 'ton' %}selected{% endif %}>ton</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Kullanım Alanı</label>
+                                            <input type="text" class="form-control" name="kullanim_alani" value="{{ gubre.kullanim_alani or '' }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Uygulama Dozu (5 dönüm için)</label>
+                                            <input type="number" step="0.01" class="form-control" name="uygulama_dozu" value="{{ gubre.uygulama_dozu or '' }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Not</label>
+                                            <textarea class="form-control" name="not_bilgisi" rows="2">{{ gubre.not_bilgisi or '' }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz gübre eklenmemiş. Yukarıdaki formu kullanarak gübre ekleyebilirsiniz.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

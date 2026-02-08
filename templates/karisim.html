@@ -1,0 +1,61 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-flask me-2"></i> Karışım Kontrolü
+        </h1>
+        <p class="lead">İlaçların birbirleriyle karıştırılabilirliğini yapay zeka ile kontrol edin.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <!-- Karışım Kontrol Formu -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-vials me-2"></i>İlaçları Seçin (En az 2)</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('karisim_kontrol') }}">
+                    {% for i in range(1, 6) %}
+                    <div class="mb-3">
+                        <label for="ilac{{ i }}" class="form-label">{{ i }}. İlaç</label>
+                        <input type="text" class="form-control ilac-input" id="ilac{{ i }}" name="ilac{{ i }}"
+                               list="ilacListesi" placeholder="İlaç adı girin..." {% if i <= 2 %}required{% endif %}>
+                    </div>
+                    {% endfor %}
+
+                    <datalist id="ilacListesi">
+                        {% for ilac in ilac_listesi %}
+                        <option value="{{ ilac }}">
+                        {% endfor %}
+                    </datalist>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Karışımı Kontrol Et
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sonuç Alanı -->
+        {% if sonuc %}
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>Karışım Analiz Sonucu
+                    {% if kaynak %}
+                    <span class="badge bg-light text-dark ms-2">{{ kaynak }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="karisim-sonuc" style="white-space: pre-wrap;">{{ sonuc }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

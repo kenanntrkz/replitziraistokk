@@ -1,0 +1,88 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-hand-holding-water me-2"></i> Gübre Kullanımı
+        </h1>
+        <p class="lead">Gübre kullanım kaydı oluştur ve geçmiş kullanımları görüntüle.</p>
+    </div>
+</div>
+
+<!-- Gübre Kullanım Formu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Gübre Kullanımı Kaydet</h5>
+    </div>
+    <div class="card-body">
+        {% if gubreler %}
+        <form method="POST" action="{{ url_for('gubre_kullanim') }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="gubre_id" class="form-label">Gübre Seçin</label>
+                    <select class="form-select" id="gubre_id" name="gubre_id" required>
+                        <option value="">-- Gübre Seçin --</option>
+                        {% for gubre in gubreler %}
+                        <option value="{{ gubre.id }}">{{ gubre.ad }} (Stok: {{ gubre.miktar }} {{ gubre.birim }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="kullanilan_miktar" class="form-label">Kullanılan Miktar</label>
+                    <input type="number" step="0.01" class="form-control" id="kullanilan_miktar" name="kullanilan_miktar" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="alan" class="form-label">Uygulanan Alan (m2)</label>
+                    <input type="number" step="0.01" class="form-control" id="alan" name="alan" placeholder="Opsiyonel">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Kullanımı Kaydet
+            </button>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> Stokta gübre bulunmuyor. Önce <a href="{{ url_for('gubreler') }}">gübre eklemeniz</a> gerekmektedir.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Son Kullanımlar -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son Gübre Kullanımları</h5>
+    </div>
+    <div class="card-body">
+        {% if son_kullanimlar %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Gübre</th>
+                        <th>Kullanılan Miktar</th>
+                        <th>Uygulanan Alan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kullanim in son_kullanimlar %}
+                    <tr>
+                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ kullanim.gubre.ad }}</td>
+                        <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.gubre.birim }}</td>
+                        <td>{% if kullanim.alan %}{{ kullanim.alan }} m2{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz gübre kullanım kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

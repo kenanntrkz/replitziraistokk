@@ -1,0 +1,149 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="fas fa-chart-bar me-2"></i> Raporlar
+        </h1>
+        <p class="lead">Günlük, aylık ve yıllık kullanım raporlarını görüntüleyin.</p>
+    </div>
+</div>
+
+<!-- Rapor Filtresi -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Rapor Filtresi</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('raporlar') }}">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="rapor_turu" class="form-label">Rapor Türü</label>
+                    <select class="form-select" id="rapor_turu" name="rapor_turu">
+                        <option value="gunluk" {% if rapor_turu == 'gunluk' %}selected{% endif %}>Günlük</option>
+                        <option value="aylik" {% if rapor_turu == 'aylik' %}selected{% endif %}>Aylık</option>
+                        <option value="yillik" {% if rapor_turu == 'yillik' %}selected{% endif %}>Yıllık</option>
+                        <option value="ozel" {% if rapor_turu == 'ozel' %}selected{% endif %}>Özel Tarih Aralığı</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="baslangic_tarih" class="form-label">Başlangıç Tarihi</label>
+                    <input type="date" class="form-control" id="baslangic_tarih" name="baslangic_tarih"
+                           value="{{ baslangic.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="bitis_tarih" class="form-label">Bitiş Tarihi</label>
+                    <input type="date" class="form-control" id="bitis_tarih" name="bitis_tarih"
+                           value="{{ bitis.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Raporu Getir
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Rapor Özeti -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ ilac_kullanimlari|length }}</h3>
+                <p class="mb-0">İlaç Kullanım Kaydı</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ gubre_kullanimlari|length }}</h3>
+                <p class="mb-0">Gübre Kullanım Kaydı</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İlaç Kullanım Raporu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-prescription-bottle me-2"></i>İlaç Kullanımları
+            <span class="badge bg-primary ms-2">{{ baslangic.strftime('%d.%m.%Y') }} - {{ bitis.strftime('%d.%m.%Y') }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if ilac_kullanimlari %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>İlaç</th>
+                        <th>Kullanılan Miktar</th>
+                        <th>Su Miktarı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kullanim in ilac_kullanimlari %}
+                    <tr>
+                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ kullanim.ilac.ad }}</td>
+                        <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.ilac.birim }}</td>
+                        <td>{{ kullanim.su_miktari }} lt</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Bu tarih aralığında ilaç kullanım kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Gübre Kullanım Raporu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-seedling me-2"></i>Gübre Kullanımları
+            <span class="badge bg-success ms-2">{{ baslangic.strftime('%d.%m.%Y') }} - {{ bitis.strftime('%d.%m.%Y') }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if gubre_kullanimlari %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Gübre</th>
+                        <th>Kullanılan Miktar</th>
+                        <th>Alan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kullanim in gubre_kullanimlari %}
+                    <tr>
+                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ kullanim.gubre.ad }}</td>
+                        <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.gubre.birim }}</td>
+                        <td>{% if kullanim.alan %}{{ kullanim.alan }} m2{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Bu tarih aralığında gübre kullanım kaydı bulunmuyor.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
