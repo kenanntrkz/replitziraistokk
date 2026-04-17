@@ -105,6 +105,7 @@
                         <th>Dozu</th>
                         <th>Hasat Süresi</th>
                         <th>Uyarı</th>
+                        <th>Uygulama Kapasitesi</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
@@ -119,6 +120,27 @@
                         <td>{{ ilac.dozaj or '-' }}</td>
                         <td>{{ ilac.hasat_suresi or '-' }}</td>
                         <td>{% if ilac.uyari %}<span class="badge bg-warning text-dark">{{ ilac.uyari }}</span>{% else %}-{% endif %}</td>
+                        <td>
+                            {% set h = ilac_hesaplar.get(ilac.id, {}) %}
+                            {% if h.get('uygulama_litre') is not none %}
+                                {% if h.get('dusuk') %}
+                                    <span class="text-warning fw-semibold">
+                                        {{ h.uygulama_litre|int }} L
+                                        &nbsp;/&nbsp;
+                                        {{ h.taral }} Taral
+                                        <i class="fas fa-exclamation-triangle ms-1" title="1 Taral'dan az"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="text-success">
+                                        {{ h.uygulama_litre|int }} L
+                                        &nbsp;/&nbsp;
+                                        {{ h.taral }} Taral
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#duzenleModal{{ ilac.id }}">
                                 <i class="fas fa-edit"></i>

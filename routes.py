@@ -371,7 +371,39 @@ def ilaclar():
             initial_ilaclar = []
     
     # Tarayıcı önbelleğini devre dışı bırakacak başlıkları ekleyelim
-    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar))
+    # Kapasite hesapla
+    def calc_kapasite(miktar, birim, dozaj_str):
+        import re as _re
+        if not dozaj_str:
+            return None, None
+        m = _re.search(r'(\d+(?:[.,]\d+)?)', str(dozaj_str))
+        if not m:
+            return None, None
+        try:
+            doz = float(m.group(1).replace(',', '.'))
+        except Exception:
+            return None, None
+        if doz <= 0:
+            return None, None
+        # lt ve kg'ı 1000 ile çarp
+        if birim in ('lt', 'kg'):
+            stok_base = miktar * 1000
+        else:  # ml, gr
+            stok_base = miktar
+        uygulama_litre = (stok_base / doz) * 100
+        taral = uygulama_litre / 1600
+        return round(uygulama_litre, 1), round(taral, 2)
+
+    ilac_hesaplar = {}
+    for ilac in ilaclar:
+        ul, tr = calc_kapasite(ilac.miktar, ilac.birim, ilac.dozaj)
+        ilac_hesaplar[ilac.id] = {
+            'uygulama_litre': ul,
+            'taral': tr,
+            'dusuk': (tr is not None and tr < 1)
+        }
+
+    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar, ilac_hesaplar=ilac_hesaplar))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
