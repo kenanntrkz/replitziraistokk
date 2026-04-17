@@ -47,7 +47,7 @@
                     <label for="miktar" class="form-label">Stok Miktarı</label>
                     <input type="number" step="0.01" class="form-control" id="miktar" name="miktar" required>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                     <label for="birim" class="form-label">Birim</label>
                     <select class="form-select" id="birim" name="birim" required>
                         <option value="ml">ml</option>
@@ -56,7 +56,11 @@
                         <option value="kg">kg</option>
                     </select>
                 </div>
-                <div class="col-md-4 mb-3 d-flex align-items-end">
+                <div class="col-md-3 mb-3">
+                    <label for="min_stok" class="form-label">Kritik Min. Stok</label>
+                    <input type="number" step="0.01" class="form-control" id="min_stok" name="min_stok" value="100" required>
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="kaydet_json" name="kaydet_json" checked>
                         <label class="form-check-label" for="kaydet_json">JSON veritabanına da kaydet</label>
@@ -185,20 +189,27 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const adInput = document.getElementById('ad');
-    const etkenMaddeInput = document.getElementById('etken_madde');
-    const hedefHastalikInput = document.getElementById('hedef_hastalik');
-    const dozajInput = document.getElementById('dozaj');
+    var adInput = document.getElementById('ad');
+    var etkenMaddeInput = document.getElementById('etken_madde');
+    var hedefHastalikInput = document.getElementById('hedef_hastalik');
+    var dozajInput = document.getElementById('dozaj');
 
-    // Autocomplete: İlaç seçildiğinde bilgileri doldur
-    adInput.addEventListener('change', function() {
-        const selectedOption = document.querySelector('#ilacListesi option[value="' + adInput.value + '"]');
-        if (selectedOption) {
-            etkenMaddeInput.value = selectedOption.dataset.etken || '';
-            hedefHastalikInput.value = selectedOption.dataset.hastalik || '';
-            dozajInput.value = selectedOption.dataset.dozaj || '';
+    var ilacVerileri = {};
+    {% for ilac in initial_ilaclar %}
+    ilacVerileri[{{ ilac.ad | tojson }}] = {etken: {{ (ilac.etken_madde or '') | tojson }}, hastalik: {{ (ilac.hedef_hastalik or '') | tojson }}, dozaj: {{ ilac.dozaj }}};
+    {% endfor %}
+
+    function doldur(deger) {
+        if (ilacVerileri[deger]) {
+            var b = ilacVerileri[deger];
+            etkenMaddeInput.value = b.etken || '';
+            hedefHastalikInput.value = b.hastalik || '';
+            dozajInput.value = b.dozaj || '';
         }
-    });
+    }
+
+    adInput.addEventListener('input', function() { doldur(this.value); });
+    adInput.addEventListener('change', function() { doldur(this.value); });
 });
 </script>
 {% endblock %}
