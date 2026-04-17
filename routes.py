@@ -7,7 +7,11 @@ import pytz
 import urllib.parse
 from functools import wraps
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, g, session
+import re
 import io
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from app import app, db
 from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag
 
@@ -15,6 +19,77 @@ from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag
 # Kullanıcı adı ve şifre .env dosyasından okunur, yoksa varsayılan değerler kullanılır
 APP_USERNAME = os.environ.get('APP_USERNAME', 'admin')
 APP_PASSWORD = os.environ.get('APP_PASSWORD', 'tarim2026')
+
+# ----- E-POSTA BILDIRIMI -----
+SMTP_HOST = os.environ.get('SMTP_HOST', 'mail.turkoz.digital')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+SMTP_USER_ADDR = os.environ.get('SMTP_USER', 'iletisim@turkoz.digital')
+SMTP_PASS = os.environ.get('SMTP_PASS')
+NOTIFY_EMAIL = os.environ.get('NOTIFY_EMAIL', 'kenan@turkoz.digital')
+
+
+def kritik_stok_email_gonder(kritik_ilaclar, kritik_gubreler):
+    """Kritik stok uyarisi e-postasi - gunde bir kez gonderilir."""
+    if not kritik_ilaclar and not kritik_gubreler:
+        return False
+    if not SMTP_PASS:
+        app.logger.warning('SMTP_PASS tanimli degil, e-posta gonderilemedi.')
+        return False
+
+    flag_file = '/var/www/tarim/data/last_kritik_email.txt'
+    try:
+        if os.path.exists(flag_file):
+            with open(flag_file, 'r') as fh:
+                last_ts = float(fh.read().strip())
+            import time as _time
+            if _time.time() - last_ts < 86400:
+                return False
+    except Exception:
+        pass
+
+    lines_list = ['Zirai Stok Takip Sistemi - Kritik Stok Uyarisi', '']
+    if kritik_ilaclar:
+        lines_list.append('KRITIK ILACLAR:')
+        for ilac in kritik_ilaclar:
+            lines_list.append(
+                '  - ' + ilac.ad + ': ' + str(round(ilac.miktar, 1)) + ' ' + ilac.birim +
+                ' (min: ' + str(ilac.min_stok) + ' ' + ilac.birim + ')'
+            )
+    if kritik_gubreler:
+        lines_list.append('')
+        lines_list.append('KRITIK GUBRELER:')
+        for gubre in kritik_gubreler:
+            lines_list.append(
+                '  - ' + gubre.ad + ': ' + str(round(gubre.miktar, 1)) + ' ' + gubre.birim +
+                ' (min: ' + str(gubre.min_stok) + ' ' + gubre.birim + ')'
+            )
+    lines_list.append('')
+    lines_list.append('Toplam kritik urun: ' + str(len(kritik_ilaclar) + len(kritik_gubreler)))
+    lines_list.append('http://tarim.kenanturkoz.cloud/')
+
+    body = chr(10).join(lines_list)
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER_ADDR
+        msg['To'] = NOTIFY_EMAIL
+        msg['Subject'] = '[Zirai Stok] ' + str(len(kritik_ilaclar) + len(kritik_gubreler)) + ' Kritik Stok Uyarisi'
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(SMTP_USER_ADDR, SMTP_PASS)
+            server.sendmail(SMTP_USER_ADDR, NOTIFY_EMAIL, msg.as_string())
+        import time as _time
+        os.makedirs('/var/www/tarim/data', exist_ok=True)
+        with open(flag_file, 'w') as fh:
+            fh.write(str(_time.time()))
+        app.logger.info('Kritik stok e-postasi gonderildi: ' + NOTIFY_EMAIL)
+        return True
+    except Exception as e:
+        app.logger.error('Kritik stok e-posta hatasi: ' + str(e))
+        return False
+
 
 def login_required(f):
     """Giriş yapmayan kullanıcıları login sayfasına yönlendirir."""
@@ -58,7 +133,7 @@ anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY')
 openai_api_key = os.environ.get('OPENAI_API_KEY')
 
 # Model isimleri
-CLAUDE_MODEL = "claude-3-5-sonnet-20241022"  # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+CLAUDE_MODEL = "claude-sonnet-4-6"
 OPENAI_MODEL = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 
 # API istemcilerini hazırla, ancak yalnızca API çağrısı yapıldığında kullan
@@ -118,15 +193,31 @@ def inject_now():
 @app.route('/')
 @login_required
 def index():
-    # İlaç stok uyarısı kontrolü (1200 litre eşdeğeri altında olanlar)
-    ilaclar = Ilac.query.all()
-    ilac_uyarilar = []
+    # Kritik stok kontrolü (min_stok altındaki ürünler)
+    kritik_ilaclar = Ilac.query.filter(Ilac.miktar < Ilac.min_stok).all()
+    kritik_gubreler = Gubre.query.filter(Gubre.miktar < Gubre.min_stok).all()
     
-    for ilac in ilaclar:
-        if ilac.miktar * 100 / ilac.dozaj < 1200:  # 100 litre için dozaj değerini kullanarak hesapla
-            ilac_uyarilar.append(ilac)
+    # Özet istatistikler
+    toplam_ilac = Ilac.query.count()
+    toplam_gubre = Gubre.query.count()
+    toplam_bag = Bag.query.filter_by(aktif=True).count()
     
-    return render_template('index.html', ilac_uyarilar=ilac_uyarilar)
+    # Son işlemler
+    son_ilaclama = IlacKullanim.query.order_by(IlacKullanim.tarih.desc()).first()
+    son_gubreleme = GubreKullanim.query.order_by(GubreKullanim.tarih.desc()).first()
+    
+    # Kritik stok e-posta bildirimi (gunde 1 kez)
+    kritik_stok_email_gonder(kritik_ilaclar, kritik_gubreler)
+
+    return render_template('index.html', 
+        ilac_uyarilar=kritik_ilaclar,
+        gubre_uyarilar=kritik_gubreler,
+        toplam_ilac=toplam_ilac,
+        toplam_gubre=toplam_gubre,
+        toplam_bag=toplam_bag,
+        son_ilaclama=son_ilaclama,
+        son_gubreleme=son_gubreleme
+    )
 
 # ----- İLAÇ YÖNETİMİ -----
 @app.route('/ilaclar', methods=['GET', 'POST'])
@@ -139,20 +230,47 @@ def ilaclar():
         hedef_hastalik = request.form['hedef_hastalik']
         miktar = float(request.form['miktar'])
         birim = request.form['birim']
-        dozaj = float(request.form['dozaj'])
+        dozaj = request.form.get('dozaj', '').strip()
+        grup = request.form.get('grup', '').strip()
+        hasat_suresi = request.form.get('hasat_suresi', '').strip()
+        uyari = request.form.get('uyari', '').strip()
         kaydet_json = 'kaydet_json' in request.form
-        
-        yeni_ilac = Ilac(
-            ad=ad,
-            etken_madde=etken_madde,
-            hedef_hastalik=hedef_hastalik,
-            miktar=miktar,
-            birim=birim,
-            dozaj=dozaj
-        )
-        
-        db.session.add(yeni_ilac)
-        db.session.commit()
+
+        # Aynı isimde ilaç varsa miktarı güncelle, yoksa yeni kayıt aç
+        mevcut_ilac = Ilac.query.filter(
+            db.func.lower(Ilac.ad) == ad.lower().strip()
+        ).first()
+
+        if mevcut_ilac:
+            mevcut_ilac.miktar += miktar
+            if etken_madde and not mevcut_ilac.etken_madde:
+                mevcut_ilac.etken_madde = etken_madde
+            if hedef_hastalik and not mevcut_ilac.hedef_hastalik:
+                mevcut_ilac.hedef_hastalik = hedef_hastalik
+            if dozaj and not mevcut_ilac.dozaj:
+                mevcut_ilac.dozaj = dozaj
+            if grup and not mevcut_ilac.grup:
+                mevcut_ilac.grup = grup
+            if hasat_suresi and not mevcut_ilac.hasat_suresi:
+                mevcut_ilac.hasat_suresi = hasat_suresi
+            if uyari and not mevcut_ilac.uyari:
+                mevcut_ilac.uyari = uyari
+            db.session.commit()
+            flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut_ilac.miktar} {mevcut_ilac.birim}', 'success')
+        else:
+            yeni_ilac = Ilac(
+                ad=ad,
+                etken_madde=etken_madde,
+                hedef_hastalik=hedef_hastalik,
+                miktar=miktar,
+                birim=birim,
+                dozaj=dozaj,
+                grup=grup,
+                hasat_suresi=hasat_suresi,
+                uyari=uyari
+            )
+            db.session.add(yeni_ilac)
+            db.session.commit()
         
         # İlacı JSON dosyasına da kaydet
         if kaydet_json:
@@ -202,35 +320,15 @@ def ilaclar():
             # Verileri ilac.html şablonuna uygun formata dönüştür
             initial_ilaclar = []
             for ilac in zirai_ilaclar:
-                # Yeni API formatı (ad ve dozaj doğrudan erişilebilir)
-                if 'ad' in ilac and 'dozaj' in ilac:
-                    initial_ilaclar.append({
-                        'ad': ilac.get('ad', ''),
-                        'etken_madde': ilac.get('etken_madde', ''),
-                        'hedef_hastalik': ilac.get('hedef_hastalik', ''),
-                        'dozaj': float(ilac.get('dozaj', 0))
-                    })
-                # Eski format desteği (ilac_adi ve dozaj_str ile)
-                elif 'ilac_adi' in ilac:
-                    # Dozaj bilgisini sayısal formata dönüştür
-                    dozaj_str = ilac.get('dozaj', '0')
-                    if dozaj_str is None:
-                        dozaj_str = '0'
-                    # Sayısal değer zaten varsa direkt kullan, string ise dönüştür
-                    if isinstance(dozaj_str, (int, float)):
-                        dozaj_value = float(dozaj_str)
-                    else:
-                        # Sadece sayısal kısmı al
-                        import re
-                        dozaj_match = re.search(r'(\d+(?:\.\d+)?)', str(dozaj_str))
-                        dozaj_value = float(dozaj_match.group(1)) if dozaj_match else 0
-                    
-                    initial_ilaclar.append({
-                        'ad': ilac.get('ilac_adi', ''),
-                        'etken_madde': ilac.get('etken_madde', ''),
-                        'hedef_hastalik': ilac.get('hastalik', ''),
-                        'dozaj': dozaj_value
-                    })
+                initial_ilaclar.append({
+                    'ad': ilac.get('ad', '') or ilac.get('ilac_adi', ''),
+                    'etken_madde': ilac.get('etken_madde', ''),
+                    'hedef_hastalik': ilac.get('hedef_hastalik', '') or ilac.get('hastalik', ''),
+                    'dozaj': str(ilac.get('dozaj', '')),
+                    'grup': ilac.get('grup', ''),
+                    'hasat_suresi': ilac.get('hasat_suresi', ''),
+                    'uyari': ilac.get('uyari', '')
+                })
             
             print(f"API'den ilac listesi yüklendi: {len(initial_ilaclar)} ilaç.")
         else:
@@ -255,15 +353,17 @@ def ilaclar():
                 if dozaj_str is None:
                     dozaj_str = '0'
                 # Sadece sayısal kısmı al
-                import re
                 dozaj_match = re.search(r'(\d+(?:\.\d+)?)', str(dozaj_str))
                 dozaj_value = float(dozaj_match.group(1)) if dozaj_match else 0
                 
                 initial_ilaclar.append({
-                    'ad': ilac.get('ilac_adi', '') or ilac.get('ad', ''),
+                    'ad': ilac.get('ad', '') or ilac.get('ilac_adi', ''),
                     'etken_madde': ilac.get('etken_madde', ''),
-                    'hedef_hastalik': ilac.get('hastalik', '') or ilac.get('hedef_hastalik', ''),
-                    'dozaj': dozaj_value
+                    'hedef_hastalik': ilac.get('hedef_hastalik', '') or ilac.get('hastalik', ''),
+                    'dozaj': str(ilac.get('dozaj', '')),
+                    'grup': ilac.get('grup', ''),
+                    'hasat_suresi': ilac.get('hasat_suresi', ''),
+                    'uyari': ilac.get('uyari', '')
                 })
             print(f"Dosyadan ilac listesi yüklendi (yedek çözüm): {len(initial_ilaclar)} ilaç.")
         except Exception as backup_e:
@@ -287,11 +387,15 @@ def ilac_duzenle(id):
     
     # Yeni değerleri al
     ilac.ad = request.form['ad']
-    ilac.etken_madde = request.form['etken_madde']
-    ilac.hedef_hastalik = request.form['hedef_hastalik']
+    ilac.etken_madde = request.form.get('etken_madde', '')
+    ilac.hedef_hastalik = request.form.get('hedef_hastalik', '')
     ilac.miktar = float(request.form['miktar'])
     ilac.birim = request.form['birim']
-    ilac.dozaj = float(request.form['dozaj'])
+    ilac.dozaj = request.form.get('dozaj', '').strip()
+    ilac.grup = request.form.get('grup', '').strip()
+    ilac.hasat_suresi = request.form.get('hasat_suresi', '').strip()
+    ilac.uyari = request.form.get('uyari', '').strip()
+    ilac.min_stok = float(request.form.get('min_stok', 100))
     
     # Veritabanına kaydet
     db.session.commit()
@@ -354,25 +458,49 @@ def gubreler():
         # Yeni gübre ekleme
         ad = request.form['ad']
         formulasyon = request.form['formulasyon']
+        kategori = request.form.get('kategori', '')
         miktar = float(request.form['miktar'])
         birim = request.form['birim']
         kullanim_alani = request.form['kullanim_alani']
-        uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+        uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
+        yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
         not_bilgisi = request.form['not_bilgisi']
         
-        yeni_gubre = Gubre(
-            ad=ad,
-            formulasyon=formulasyon,
-            miktar=miktar,
-            birim=birim,
-            kullanim_alani=kullanim_alani,
-            uygulama_dozu=uygulama_dozu,
-            not_bilgisi=not_bilgisi
-        )
-        
-        db.session.add(yeni_gubre)
-        db.session.commit()
-        flash('Gübre başarıyla eklendi', 'success')
+        # Aynı isimde gübre varsa miktarı güncelle, yoksa yeni kayıt aç
+        mevcut = Gubre.query.filter(
+            db.func.lower(Gubre.ad) == ad.lower().strip()
+        ).first()
+
+        if mevcut:
+            mevcut.miktar += miktar
+            # Boş alanları doldur
+            if formulasyon and not mevcut.formulasyon:
+                mevcut.formulasyon = formulasyon
+            if kategori and not mevcut.kategori:
+                mevcut.kategori = kategori
+            if kullanim_alani and not mevcut.kullanim_alani:
+                mevcut.kullanim_alani = kullanim_alani
+            if uygulama_dozu and not mevcut.uygulama_dozu:
+                mevcut.uygulama_dozu = uygulama_dozu
+            if yaprak_dozu and not mevcut.yaprak_dozu:
+                mevcut.yaprak_dozu = yaprak_dozu
+            db.session.commit()
+            flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut.miktar} {mevcut.birim}', 'success')
+        else:
+            yeni_gubre = Gubre(
+                ad=ad,
+                formulasyon=formulasyon,
+                kategori=kategori,
+                miktar=miktar,
+                birim=birim,
+                kullanim_alani=kullanim_alani,
+                uygulama_dozu=uygulama_dozu,
+                yaprak_dozu=yaprak_dozu,
+                not_bilgisi=not_bilgisi
+            )
+            db.session.add(yeni_gubre)
+            db.session.commit()
+            flash(f'{ad} gübre olarak eklendi.', 'success')
         return redirect(url_for('gubreler'))
     
     # Tüm gübreleri getir
@@ -385,10 +513,12 @@ def gubre_duzenle(id):
     gubre = Gubre.query.get_or_404(id)
     gubre.ad = request.form['ad']
     gubre.formulasyon = request.form['formulasyon']
+    gubre.kategori = request.form.get('kategori', '')
     gubre.miktar = float(request.form['miktar'])
     gubre.birim = request.form['birim']
     gubre.kullanim_alani = request.form['kullanim_alani']
-    gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form['uygulama_dozu'] else None
+    gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
+    gubre.yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
     gubre.not_bilgisi = request.form['not_bilgisi']
     
     db.session.commit()
@@ -408,6 +538,63 @@ def gubre_sil(id):
     flash('Gübre başarıyla silindi', 'success')
     return redirect(url_for('gubreler'))
 
+@app.route('/api/gubre-katalog', methods=['GET'])
+@login_required
+def api_gubre_katalog_liste():
+    """Katalogdaki tüm ürünleri döndürür (dropdown için)."""
+    rows = db.session.execute(
+        db.text('SELECT id, ad, kategori FROM gubre_katalog ORDER BY kategori, ad')
+    ).fetchall()
+    return jsonify([{'id': r[0], 'ad': r[1], 'kategori': r[2]} for r in rows])
+
+@app.route('/api/gubre-katalog/<int:katalog_id>', methods=['GET'])
+@login_required
+def api_gubre_katalog_detay(katalog_id):
+    """Katalog ürün detayını döndürür (form doldurma için)."""
+    row = db.session.execute(
+        db.text('SELECT id, ad, kategori, formulasyon, aciklama, yaprak_dozu_min, yaprak_dozu_max, damlama_dozu_min, damlama_dozu_max, kullanim_alani, ambalaj_secenekleri, kaynak FROM gubre_katalog WHERE id = :id'),
+        {'id': katalog_id}
+    ).fetchone()
+    if not row:
+        return jsonify({'error': 'Bulunamadı'}), 404
+    return jsonify({
+        'id': row[0], 'ad': row[1], 'kategori': row[2], 'formulasyon': row[3],
+        'aciklama': row[4], 'yaprak_dozu_min': row[5], 'yaprak_dozu_max': row[6],
+        'damlama_dozu_min': row[7], 'damlama_dozu_max': row[8],
+        'kullanim_alani': row[9], 'ambalaj_secenekleri': row[10], 'kaynak': row[11]
+    })
+
+@app.route('/api/gubre-katalog/ekle', methods=['POST'])
+@login_required
+def api_gubre_katalog_ekle():
+    """Manuel eklenen ürünü kataloğa kaydeder."""
+    data = request.get_json()
+    if not data or not data.get('ad'):
+        return jsonify({'error': 'Ad zorunlu'}), 400
+    try:
+        db.session.execute(db.text("""
+            INSERT INTO gubre_katalog (ad, kategori, formulasyon, yaprak_dozu_min, yaprak_dozu_max, damlama_dozu_min, damlama_dozu_max, kullanim_alani, kaynak)
+            VALUES (:ad, :kategori, :formulasyon, :yaprak_dozu_min, :yaprak_dozu_max, :damlama_dozu_min, :damlama_dozu_max, :kullanim_alani, 'manuel')
+            ON CONFLICT (ad, kaynak) DO UPDATE SET
+                kategori=EXCLUDED.kategori, formulasyon=EXCLUDED.formulasyon
+        """), {
+            'ad': data.get('ad'), 'kategori': data.get('kategori'),
+            'formulasyon': data.get('formulasyon'),
+            'yaprak_dozu_min': data.get('yaprak_dozu'), 'yaprak_dozu_max': data.get('yaprak_dozu'),
+            'damlama_dozu_min': data.get('uygulama_dozu'), 'damlama_dozu_max': data.get('uygulama_dozu'),
+            'kullanim_alani': data.get('kullanim_alani')
+        })
+        db.session.commit()
+        # Yeni eklenen id'yi bul
+        row = db.session.execute(
+            db.text("SELECT id FROM gubre_katalog WHERE ad=:ad AND kaynak='manuel'"),
+            {'ad': data.get('ad')}
+        ).fetchone()
+        return jsonify({'success': True, 'katalog_id': row[0] if row else None})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # ----- İLAÇ KULLANIM YÖNETİMİ -----
 @app.route('/ilac-kullanim', methods=['GET', 'POST'])
 @login_required
@@ -418,6 +605,7 @@ def ilac_kullanim():
         
         basarili_kayitlar = 0
         hatalar = []
+        bag_id_val = int(request.form.get('bag_id')) if request.form.get('bag_id') else None
         
         # Her ilaç için ayrı kayıt oluştur
         for ilac_id in ilac_ids:
@@ -441,6 +629,7 @@ def ilac_kullanim():
                 # Kullanım kaydı oluştur
                 yeni_kullanim = IlacKullanim(
                     ilac_id=ilac_id,
+                    bag_id=bag_id_val,
                     kullanilan_miktar=gereken_ilac_miktari,
                     su_miktari=su_miktari
                 )
@@ -465,11 +654,24 @@ def ilac_kullanim():
             
         return redirect(url_for('ilac_kullanim'))
     
-    # Mevcut ilaçları getir
+    # Mevcut ilaçları ve bağları getir
     ilaclar = Ilac.query.all()
-    son_kullanimlar = IlacKullanim.query.order_by(IlacKullanim.tarih.desc()).limit(10).all()
-    
-    return render_template('ilac_kullanim.html', ilaclar=ilaclar, son_kullanimlar=son_kullanimlar)
+    baglar = Bag.query.filter_by(aktif=True).all()
+    # Gruplama için yeterli kayıt al (100), sonra ilk 10 grubu al
+    son_kullanimlar_raw = IlacKullanim.query.order_by(IlacKullanim.tarih.desc()).limit(100).all()
+    tr_timezone = pytz.timezone('Europe/Istanbul')
+    def utc_to_tr_ilac(utc_dt):
+        if not utc_dt:
+            return None
+        if utc_dt.tzinfo is None:
+            utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+        return utc_dt.astimezone(tr_timezone)
+    gruplari = IlacKullanim.grup_kayitlari(son_kullanimlar_raw)
+    son_grup_kullanimlari = sorted(gruplari.values(), key=lambda x: x['tarih'], reverse=True)[:10]
+    for grup in son_grup_kullanimlari:
+        grup['tr_tarih'] = utc_to_tr_ilac(grup['tarih'])
+
+    return render_template('ilac_kullanim.html', ilaclar=ilaclar, baglar=baglar, son_grup_kullanimlari=son_grup_kullanimlari)
 
 # ----- GÜBRE KULLANIM YÖNETİMİ -----
 @app.route('/gubre-kullanim', methods=['GET', 'POST'])
@@ -479,6 +681,7 @@ def gubre_kullanim():
         gubre_id = int(request.form['gubre_id'])
         kullanilan_miktar = float(request.form['kullanilan_miktar'])
         alan = float(request.form['alan']) if request.form['alan'] else None
+        bag_id = int(request.form['bag_id']) if request.form.get('bag_id') else None
         
         # Gübreyi bulalım
         gubre = Gubre.query.get_or_404(gubre_id)
@@ -491,6 +694,7 @@ def gubre_kullanim():
         # Kullanım kaydı oluştur
         yeni_kullanim = GubreKullanim(
             gubre_id=gubre_id,
+            bag_id=bag_id,
             kullanilan_miktar=kullanilan_miktar,
             alan=alan
         )
@@ -503,11 +707,12 @@ def gubre_kullanim():
         flash(f'Gübre kullanımı kaydedildi. {kullanilan_miktar} {gubre.birim} kullanıldı.', 'success')
         return redirect(url_for('gubre_kullanim'))
     
-    # Mevcut gübreleri getir
+# Mevcut gübreleri ve bağları getir
     gubreler = Gubre.query.all()
+    baglar = Bag.query.filter_by(aktif=True).all()
     son_kullanimlar = GubreKullanim.query.order_by(GubreKullanim.tarih.desc()).limit(10).all()
     
-    return render_template('gubre_kullanim.html', gubreler=gubreler, son_kullanimlar=son_kullanimlar)
+    return render_template('gubre_kullanim.html', gubreler=gubreler, baglar=baglar, son_kullanimlar=son_kullanimlar)
 
 # ----- RAPORLAR -----
 @app.route('/raporlar')
@@ -742,7 +947,7 @@ def bag_duzenle(id):
     
     return render_template('bag_duzenle.html', bag=bag)
 
-@app.route('/bag/sil/<int:id>')
+@app.route('/bag/sil/<int:id>', methods=['POST'])
 @login_required
 def bag_sil(id):
     bag = Bag.query.get_or_404(id)
@@ -1105,3 +1310,31 @@ def before_request():
     if not hasattr(app, '_initial_setup_done'):
         check_pesticides_file()
         app._initial_setup_done = True
+
+# ----- KRITIK STOK API -----
+@app.route('/api/kritik-stok')
+@login_required
+def kritik_stok():
+    """Kritik seviyede olan ilaç ve gübreleri döner."""
+    kritik_ilaclar = Ilac.query.filter(Ilac.miktar < Ilac.min_stok).all()
+    kritik_gubreler = Gubre.query.filter(Gubre.miktar < Gubre.min_stok).all()
+    
+    return jsonify({
+        'kritik_ilaclar': [{
+            'id': ilac.id,
+            'ad': ilac.ad,
+            'miktar': ilac.miktar,
+            'birim': ilac.birim,
+            'min_stok': ilac.min_stok,
+            'durum': 'KRITIK'
+        } for ilac in kritik_ilaclar],
+        'kritik_gubreler': [{
+            'id': gubre.id,
+            'ad': gubre.ad,
+            'miktar': gubre.miktar,
+            'birim': gubre.birim,
+            'min_stok': gubre.min_stok,
+            'durum': 'KRITIK'
+        } for gubre in kritik_gubreler],
+        'toplam_kritik': len(kritik_ilaclar) + len(kritik_gubreler)
+    })

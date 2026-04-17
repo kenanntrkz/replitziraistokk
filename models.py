@@ -118,14 +118,22 @@ class Ilac(db.Model):
     hedef_hastalik = db.Column(db.String(100))
     miktar = db.Column(db.Float, nullable=False)  # Toplam stok miktarı
     birim = db.Column(db.String(20), nullable=False)  # Stok birimi (ml, lt, gr, kg)
-    dozaj = db.Column(db.Float)  # 100 litre suya kaç ml/mg
+    dozaj = db.Column(db.String(200))  # Doz açıklaması (ör: 20 ml/100 L su)
+    grup = db.Column(db.String(50))  # İlaç grubu (Fungisit, İnsektisit, vb.)
+    hasat_suresi = db.Column(db.String(50))  # Son ilaçlama ile hasat arası süre
+    uyari = db.Column(db.Text)  # Uyarı bilgisi
     adet = db.Column(db.Integer)  # Şişe/paket sayısı
+    min_stok = db.Column(db.Float, default=100)  # Kritik stok seviyesi (ml/mg)
     ambalaj_miktari = db.Column(db.Float)  # Bir ambalajdaki miktar
     ambalaj_birimi = db.Column(db.String(20))  # Ambalaj birimi (ml, lt, gr, kg)
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
     def __repr__(self):
         return f"<Ilac {self.ad}>"
+    
+    def kritik_seviyede_mi(self):
+        """Stok kritik seviyenin altında mı?"""
+        return self.miktar < self.min_stok if self.min_stok else False
 
 # Gübre modeli
 class Gubre(db.Model):
@@ -134,13 +142,20 @@ class Gubre(db.Model):
     formulasyon = db.Column(db.String(50))  # N-P-K oranları (ör: 18-18-18)
     miktar = db.Column(db.Float, nullable=False)
     birim = db.Column(db.String(20), nullable=False)
+    min_stok = db.Column(db.Float, default=10)  # Kritik stok seviyesi (kg)
     kullanim_alani = db.Column(db.String(100))
-    uygulama_dozu = db.Column(db.Float)  # 5000 m² (5 dönüm) için önerilen miktar
+    uygulama_dozu = db.Column(db.Float)  # Damlama dozu: lt/da
+    yaprak_dozu = db.Column(db.Float)  # Yaprak dozu: ml/100lt su
+    kategori = db.Column(db.String(50))
     not_bilgisi = db.Column(db.Text)
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
     def __repr__(self):
         return f"<Gubre {self.ad}>"
+    
+    def kritik_seviyede_mi(self):
+        """Stok kritik seviyenin altında mı?"""
+        return self.miktar < self.min_stok if self.min_stok else False
 
 # İlaç Kullanım Kaydı
 class IlacKullanim(db.Model):

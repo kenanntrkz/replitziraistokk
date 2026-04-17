@@ -1,160 +1,2441 @@
 [
-    {"ilac_adi": "Bordo Bulamacı", "etken_madde": "Bakır Sülfat + Kireç", "hastalik": "Mildiyö, Bakteriyel Hastalıklar", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Ridomil Gold MZ 68 WG", "etken_madde": "Metalaksil-M + Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Equation Pro", "etken_madde": "Famoksedon + Simoksanil", "hastalik": "Mildiyö", "dozaj": "40 gr/100L su"},
-    {"ilac_adi": "Topas 100 EC", "etken_madde": "Penkonazol", "hastalik": "Külleme", "dozaj": "25 ml/100L su"},
-    {"ilac_adi": "Score 250 EC", "etken_madde": "Difenkonazol", "hastalik": "Külleme, Ölü Kol", "dozaj": "30 ml/100L su"},
-    {"ilac_adi": "Teldor 500 SC", "etken_madde": "Fenheksamid", "hastalik": "Botrytis (Kurşuni Küf)", "dozaj": "100 ml/100L su"},
-    {"ilac_adi": "Switch 62.5 WG", "etken_madde": "Siprodinil + Fludioksonil", "hastalik": "Botrytis, Külleme", "dozaj": "80 gr/100L su"},
-    {"ilac_adi": "Antracol 70 WP", "etken_madde": "Propineb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Champion 50 WP", "etken_madde": "Bakır Hidroksit", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Kükürt (Toz)", "etken_madde": "Elementel Kükürt", "hastalik": "Külleme, Akarlar", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Vivando", "etken_madde": "Metrafenon", "hastalik": "Külleme", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Pergado MZ", "etken_madde": "Mandipropamid + Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Quadris", "etken_madde": "Azoksistrobin", "hastalik": "Mildiyö, Külleme", "dozaj": "75 ml/100L su"},
-    {"ilac_adi": "Cabrio Top", "etken_madde": "Piraklostrobin + Metiram", "hastalik": "Mildiyö, Külleme", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Melody Duo 66.8 WP", "etken_madde": "İprovalikarb + Propineb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Falcon 460 EC", "etken_madde": "Spiroksamin + Tebukonazol + Triadimenol", "hastalik": "Külleme", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Revus", "etken_madde": "Mandipropamid", "hastalik": "Mildiyö", "dozaj": "60 ml/100L su"},
-    {"ilac_adi": "Acrobat MZ", "etken_madde": "Dimetomorf + Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Signum", "etken_madde": "Boskalid + Piraklostrobin", "hastalik": "Botrytis, Külleme", "dozaj": "150 gr/100L su"},
-    {"ilac_adi": "Trimiltox Forte", "etken_madde": "Bakır Oksiklorür + Mankozeb", "hastalik": "Mildiyö", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Nativo 75 WG", "etken_madde": "Trifloksistrobin + Tebukonazol", "hastalik": "Külleme, Mildiyö", "dozaj": "20 gr/100L su"},
-    {"ilac_adi": "Electis 75 WG", "etken_madde": "Zoksamid + Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Forum Star", "etken_madde": "Dimetomorf + Bakır Oksiklorür", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Karathane Gold", "etken_madde": "Meptildinokap", "hastalik": "Külleme", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Luna Experience", "etken_madde": "Fluopiram + Tebukonazol", "hastalik": "Botrytis, Külleme", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Profiler", "etken_madde": "Fluopikolid + Fosetil-Al", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Delan 700 WDG", "etken_madde": "Ditianon", "hastalik": "Mildiyö", "dozaj": "50 gr/100L su"},
-    {"ilac_adi": "Folpan 80 WDG", "etken_madde": "Folpet", "hastalik": "Mildiyö, Botrytis", "dozaj": "150 gr/100L su"},
-    {"ilac_adi": "Collis", "etken_madde": "Boskalid + Kresoksim-metil", "hastalik": "Külleme", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Thiovit Jet", "etken_madde": "Kükürt", "hastalik": "Külleme, Akarlar", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Cuprofix Ultra 40", "etken_madde": "Bakır sülfat tribazik", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Mancozeb 80 WP", "etken_madde": "Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Aliette 80 WG", "etken_madde": "Fosetil-Al", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Polyram DF", "etken_madde": "Metiram", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Mikal Flash", "etken_madde": "Fosetil-Al + Folpet", "hastalik": "Mildiyö", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Prosper", "etken_madde": "Spiroksamin", "hastalik": "Külleme", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Flint Max", "etken_madde": "Trifloksistrobin + Tebukonazol", "hastalik": "Külleme, Mildiyö", "dozaj": "20 gr/100L su"},
-    {"ilac_adi": "Verita", "etken_madde": "Fosetil-Al + Fenamidone", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Bellis", "etken_madde": "Boskalid + Piraklostrobin", "hastalik": "Botrytis, Külleme", "dozaj": "80 gr/100L su"},
-    {"ilac_adi": "Infinito", "etken_madde": "Fluopikolid + Propamokarb", "hastalik": "Mildiyö", "dozaj": "150 ml/100L su"},
-    {"ilac_adi": "Orvego", "etken_madde": "Ametoktradin + Dimetomorf", "hastalik": "Mildiyö", "dozaj": "80 ml/100L su"},
-    {"ilac_adi": "Enervin", "etken_madde": "Ametoktradin + Metiram", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Folicur EW 250", "etken_madde": "Tebukonazol", "hastalik": "Külleme, Pas", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Kumulus DF", "etken_madde": "Kükürt", "hastalik": "Külleme", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Merpan 80 WDG", "etken_madde": "Kaptan", "hastalik": "Mildiyö, Karaleke", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Systhane 20 EW", "etken_madde": "Miklobutanil", "hastalik": "Külleme", "dozaj": "25 ml/100L su"},
-    {"ilac_adi": "Cantus", "etken_madde": "Boskalid", "hastalik": "Botrytis", "dozaj": "120 gr/100L su"},
-    {"ilac_adi": "Karaçor", "etken_madde": "Bakır Oksiklorür", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Vondozeb Plus", "etken_madde": "Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Bravo 720 SC", "etken_madde": "Klorotalonil", "hastalik": "Mildiyö, Botrytis", "dozaj": "150 ml/100L su"},
-    {"ilac_adi": "Consento 450 SC", "etken_madde": "Propamokarb + Fenamidon", "hastalik": "Mildiyö", "dozaj": "200 ml/100L su"},
-    {"ilac_adi": "Pergado F", "etken_madde": "Mandipropamid + Folpet", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Amistar Top", "etken_madde": "Azoksistrobin + Difenkonazol", "hastalik": "Külleme, Mildiyö", "dozaj": "75 ml/100L su"},
-    {"ilac_adi": "Dithane M-45", "etken_madde": "Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Cupravit Forte", "etken_madde": "Bakır Oksiklorür", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Bayleton 25 WP", "etken_madde": "Triadimefon", "hastalik": "Külleme", "dozaj": "15 gr/100L su"},
-    {"ilac_adi": "Rubigan 12 EC", "etken_madde": "Fenarimol", "hastalik": "Külleme", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Ronilan DF", "etken_madde": "Vinklozolin", "hastalik": "Botrytis", "dozaj": "100 gr/100L su"},
-    {"ilac_adi": "Rovral", "etken_madde": "İprodion", "hastalik": "Botrytis", "dozaj": "150 gr/100L su"},
-    {"ilac_adi": "Euparen Multi", "etken_madde": "Tolilfluanid", "hastalik": "Botrytis, Külleme", "dozaj": "150 gr/100L su"},
-    {"ilac_adi": "Sercadis", "etken_madde": "Fluksapiroksad", "hastalik": "Külleme", "dozaj": "30 ml/100L su"},
-    {"ilac_adi": "Pristine", "etken_madde": "Boskalid + Piraklostrobin", "hastalik": "Botrytis, Külleme", "dozaj": "100 gr/100L su"},
-    {"ilac_adi": "Cidely Top", "etken_madde": "Difenkonazol + Ciflufenamid", "hastalik": "Külleme", "dozaj": "100 ml/100L su"},
-    {"ilac_adi": "Captan 50 WP", "etken_madde": "Kaptan", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Penncozeb 80 WP", "etken_madde": "Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Tilt 250 EC", "etken_madde": "Propikonazol", "hastalik": "Külleme", "dozaj": "25 ml/100L su"},
-    {"ilac_adi": "Anvil 5 SC", "etken_madde": "Hekzakonazol", "hastalik": "Külleme", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Domark 40 ME", "etken_madde": "Tetrakonazol", "hastalik": "Külleme", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Rally 40 WP", "etken_madde": "Miklobutanil", "hastalik": "Külleme", "dozaj": "10 gr/100L su"},
-    {"ilac_adi": "Horus 50 WG", "etken_madde": "Siprodinil", "hastalik": "Botrytis", "dozaj": "60 gr/100L su"},
-    {"ilac_adi": "Scala", "etken_madde": "Pirimetanil", "hastalik": "Botrytis", "dozaj": "200 ml/100L su"},
-    {"ilac_adi": "Prolectus", "etken_madde": "Fenpiraziamin", "hastalik": "Botrytis", "dozaj": "100 gr/100L su"},
-    {"ilac_adi": "Geoxe 50 WG", "etken_madde": "Fludioksonil", "hastalik": "Botrytis", "dozaj": "100 gr/100L su"},
-    {"ilac_adi": "Airone", "etken_madde": "Bakır + Mankozeb", "hastalik": "Mildiyö", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Kocide 2000", "etken_madde": "Bakır Hidroksit", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Nordox 75 WG", "etken_madde": "Bakır Oksit", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Funguran OH 50 WP", "etken_madde": "Bakır Hidroksit", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Coprantol Duo", "etken_madde": "Bakır Oksiklorür + Bakır Hidroksit", "hastalik": "Mildiyö", "dozaj": "350 gr/100L su"},
-    {"ilac_adi": "Microthiol Disperss", "etken_madde": "Kükürt", "hastalik": "Külleme, Akarlar", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Heliosoufre S", "etken_madde": "Kükürt (Sıvı)", "hastalik": "Külleme", "dozaj": "500 ml/100L su"},
-    {"ilac_adi": "Cosavet DF", "etken_madde": "Kükürt", "hastalik": "Külleme", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Comet 200", "etken_madde": "Piraklostrobin", "hastalik": "Külleme, Mildiyö", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Stroby DF", "etken_madde": "Kresoksim-metil", "hastalik": "Külleme", "dozaj": "20 gr/100L su"},
-    {"ilac_adi": "Universalis", "etken_madde": "Azoksistrobin + Folpet", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Sanvino", "etken_madde": "Amisulbrom + Fosetil-Al", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Zampro", "etken_madde": "Ametoktradin + Dimetomorf", "hastalik": "Mildiyö", "dozaj": "80 ml/100L su"},
-    {"ilac_adi": "Zorvec Vinabel", "etken_madde": "Okzatiapiprolin + Folpet", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Gavel 75 WP", "etken_madde": "Zoksamid + Mankozeb", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Valis M", "etken_madde": "Valifenamat + Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Aktuan WG", "etken_madde": "Valifenamat + Folpet", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Ranman Top", "etken_madde": "Siazofamid", "hastalik": "Mildiyö", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Decis 2.5 EC", "etken_madde": "Deltametrin", "hastalik": "Salkım Güvesi", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Karate 5 EC", "etken_madde": "Lambda-sihalotin", "hastalik": "Salkım Güvesi, Yaprak Bitleri", "dozaj": "30 ml/100L su"},
-    {"ilac_adi": "Steward 30 WG", "etken_madde": "İndoksakarb", "hastalik": "Salkım Güvesi", "dozaj": "17 gr/100L su"},
-    {"ilac_adi": "Coragen 20 SC", "etken_madde": "Klorantraniliprol", "hastalik": "Salkım Güvesi", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Runner 240 SC", "etken_madde": "Metoksifenozid", "hastalik": "Salkım Güvesi", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Affirm", "etken_madde": "Emamektin Benzoat", "hastalik": "Salkım Güvesi", "dozaj": "150 gr/100L su"},
-    {"ilac_adi": "Spintor 480 SC", "etken_madde": "Spinosad", "hastalik": "Salkım Güvesi, Trips", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Delegate 250 WG", "etken_madde": "Spinetoram", "hastalik": "Salkım Güvesi", "dozaj": "30 gr/100L su"},
-    {"ilac_adi": "Mimic 240 SC", "etken_madde": "Tebufenozid", "hastalik": "Salkım Güvesi", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Dimilin 48 SC", "etken_madde": "Diflubenzuron", "hastalik": "Salkım Güvesi", "dozaj": "25 ml/100L su"},
-    {"ilac_adi": "Confidor 200 SL", "etken_madde": "İmidakloprid", "hastalik": "Yaprak Bitleri, Beyaz Sinek", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Actara 25 WG", "etken_madde": "Tiametoksam", "hastalik": "Yaprak Bitleri", "dozaj": "20 gr/100L su"},
-    {"ilac_adi": "Mospilan 20 SP", "etken_madde": "Asetamiprid", "hastalik": "Yaprak Bitleri", "dozaj": "30 gr/100L su"},
-    {"ilac_adi": "Calypso 480 SC", "etken_madde": "Tiakloprid", "hastalik": "Yaprak Bitleri", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Teppeki 500 WG", "etken_madde": "Flonikamid", "hastalik": "Yaprak Bitleri", "dozaj": "14 gr/100L su"},
-    {"ilac_adi": "Movento 150 OD", "etken_madde": "Spirotetramat", "hastalik": "Koşnil, Yaprak Bitleri", "dozaj": "75 ml/100L su"},
-    {"ilac_adi": "Envidor 240 SC", "etken_madde": "Spirodiclopen", "hastalik": "Kırmızı Örümcek", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Oberon 240 SC", "etken_madde": "Spiromesifen", "hastalik": "Kırmızı Örümcek, Beyaz Sinek", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Nissorun 10 WP", "etken_madde": "Heksitiyazoks", "hastalik": "Kırmızı Örümcek", "dozaj": "50 gr/100L su"},
-    {"ilac_adi": "Apollo 50 SC", "etken_madde": "Klofentezin", "hastalik": "Kırmızı Örümcek", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Omite 570 EW", "etken_madde": "Propargit", "hastalik": "Kırmızı Örümcek", "dozaj": "100 ml/100L su"},
-    {"ilac_adi": "Milbeknock EC", "etken_madde": "Milbemektin", "hastalik": "Kırmızı Örümcek", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Vertimec 1.8 EC", "etken_madde": "Abamektin", "hastalik": "Kırmızı Örümcek, Akarlar", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Demitan 200 SC", "etken_madde": "Fenazakin", "hastalik": "Kırmızı Örümcek", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Sanmite 20 WP", "etken_madde": "Piridaben", "hastalik": "Kırmızı Örümcek", "dozaj": "75 gr/100L su"},
-    {"ilac_adi": "Kanemite 15 SC", "etken_madde": "Asekuinosil", "hastalik": "Kırmızı Örümcek", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Ortus 5 SC", "etken_madde": "Fenpiroksimat", "hastalik": "Kırmızı Örümcek, Pas Akarı", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Floramite 240 SC", "etken_madde": "Bifenazat", "hastalik": "Kırmızı Örümcek", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Magister 200 SC", "etken_madde": "Fenazakin", "hastalik": "Kırmızı Örümcek, Akarlar", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Danitol 10 EC", "etken_madde": "Fenpropatrin", "hastalik": "Kırmızı Örümcek, Salkım Güvesi", "dozaj": "75 ml/100L su"},
-    {"ilac_adi": "Talstar 10 EC", "etken_madde": "Bifentrin", "hastalik": "Kırmızı Örümcek, Salkım Güvesi", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Voliam Targo", "etken_madde": "Klorantraniliprol + Abamektin", "hastalik": "Salkım Güvesi, Akarlar", "dozaj": "80 ml/100L su"},
-    {"ilac_adi": "Ampligo 150 ZC", "etken_madde": "Klorantraniliprol + Lambda-sihalotin", "hastalik": "Salkım Güvesi", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Insegar 25 WP", "etken_madde": "Fenoksikarb", "hastalik": "Salkım Güvesi", "dozaj": "30 gr/100L su"},
-    {"ilac_adi": "Atabron 5 EC", "etken_madde": "Klorfluazuron", "hastalik": "Salkım Güvesi", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Laser 240 SC", "etken_madde": "Spinosad", "hastalik": "Salkım Güvesi, Trips", "dozaj": "25 ml/100L su"},
-    {"ilac_adi": "Bacillus thuringiensis", "etken_madde": "B.t. kurstaki", "hastalik": "Salkım Güvesi (Biyolojik)", "dozaj": "100 gr/100L su"},
-    {"ilac_adi": "Piretro Verde", "etken_madde": "Piretrin", "hastalik": "Yaprak Bitleri (Organik)", "dozaj": "200 ml/100L su"},
-    {"ilac_adi": "Neem Azal", "etken_madde": "Azadiraktin", "hastalik": "Yaprak Bitleri, Beyaz Sinek", "dozaj": "300 ml/100L su"},
-    {"ilac_adi": "Potasyum Bikarbonat", "etken_madde": "KHCO3", "hastalik": "Külleme (Organik)", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Armicarb 85 SP", "etken_madde": "Potasyum Bikarbonat", "hastalik": "Külleme (Organik)", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Prev-Am", "etken_madde": "Portakal Yağı", "hastalik": "Külleme, Yaprak Bitleri (Organik)", "dozaj": "600 ml/100L su"},
-    {"ilac_adi": "Surround WP", "etken_madde": "Kaolin", "hastalik": "Güneş Yanığı, Zararlılar", "dozaj": "3000 gr/100L su"},
-    {"ilac_adi": "Serenade ASO", "etken_madde": "Bacillus subtilis", "hastalik": "Botrytis, Külleme (Biyolojik)", "dozaj": "800 ml/100L su"},
-    {"ilac_adi": "Trichodex", "etken_madde": "Trichoderma harzianum", "hastalik": "Botrytis (Biyolojik)", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "AQ-10", "etken_madde": "Ampelomyces quisqualis", "hastalik": "Külleme (Biyolojik)", "dozaj": "70 gr/100L su"},
-    {"ilac_adi": "Madex", "etken_madde": "Cydia pomonella GV", "hastalik": "Salkım Güvesi (Biyolojik)", "dozaj": "100 ml/100L su"},
-    {"ilac_adi": "Kumulus S", "etken_madde": "Elementel Kükürt", "hastalik": "Külleme, Erinoz", "dozaj": "400 gr/100L su"},
-    {"ilac_adi": "Vitisan", "etken_madde": "Potasyum Fosfonat", "hastalik": "Mildiyö (Biyolojik)", "dozaj": "500 ml/100L su"},
-    {"ilac_adi": "Consist Plus", "etken_madde": "Bakır Sülfat", "hastalik": "Mildiyö", "dozaj": "250 ml/100L su"},
-    {"ilac_adi": "Ridomil Gold R", "etken_madde": "Metalaksil-M + Bakır Oksiklorür", "hastalik": "Mildiyö", "dozaj": "500 gr/100L su"},
-    {"ilac_adi": "Galben M", "etken_madde": "Bentiavalikarb + Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Faban", "etken_madde": "Famoksadon + Dimetomorf", "hastalik": "Mildiyö", "dozaj": "200 gr/100L su"},
-    {"ilac_adi": "Leimay 200 SC", "etken_madde": "Amisulbrom", "hastalik": "Mildiyö", "dozaj": "60 ml/100L su"},
-    {"ilac_adi": "Mildicut 250 SC", "etken_madde": "Siazofamid", "hastalik": "Mildiyö", "dozaj": "40 ml/100L su"},
-    {"ilac_adi": "Proxanil", "etken_madde": "Propamokarb + Simoksanil", "hastalik": "Mildiyö", "dozaj": "200 ml/100L su"},
-    {"ilac_adi": "Curzate M", "etken_madde": "Simoksanil + Mankozeb", "hastalik": "Mildiyö", "dozaj": "250 gr/100L su"},
-    {"ilac_adi": "Stimo WG", "etken_madde": "Bakır Sülfat", "hastalik": "Mildiyö, Bakteriyel", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Vitra 50 WP", "etken_madde": "Bakır Oksiklorür", "hastalik": "Mildiyö", "dozaj": "300 gr/100L su"},
-    {"ilac_adi": "Kop Bakır", "etken_madde": "Bakır Oksiklorür", "hastalik": "Mildiyö", "dozaj": "350 gr/100L su"},
-    {"ilac_adi": "Takumi 20 WG", "etken_madde": "Flubendiamid", "hastalik": "Salkım Güvesi", "dozaj": "15 gr/100L su"},
-    {"ilac_adi": "Belt 480 SC", "etken_madde": "Flubendiamid", "hastalik": "Salkım Güvesi", "dozaj": "10 ml/100L su"},
-    {"ilac_adi": "Exirel", "etken_madde": "Siantraniliprol", "hastalik": "Salkım Güvesi", "dozaj": "75 ml/100L su"},
-    {"ilac_adi": "Sivanto Prime", "etken_madde": "Flupiradiruone", "hastalik": "Yaprak Bitleri", "dozaj": "50 ml/100L su"},
-    {"ilac_adi": "Closer 240 SC", "etken_madde": "Sulfoksaflor", "hastalik": "Yaprak Bitleri", "dozaj": "20 ml/100L su"},
-    {"ilac_adi": "Chess 50 WG", "etken_madde": "Pimetrozin", "hastalik": "Yaprak Bitleri", "dozaj": "40 gr/100L su"},
-    {"ilac_adi": "Plenum 50 WG", "etken_madde": "Pimetrozin", "hastalik": "Yaprak Bitleri, Beyaz Sinek", "dozaj": "40 gr/100L su"}
+  {
+    "ad": "% 65 MALATHİON EM (İMAL)",
+    "etken_madde": "650 g/l Malathion",
+    "hedef_hastalik": "Turunçgil unlubiti (Planococcus citri)",
+    "grup": "İnsektisit",
+    "dozaj": "150 ml /100 l su Tüm Dönemlerde",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ABONE SÜPER 5 EC (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "ACROPOL - PLUS CC (İMAL)",
+    "etken_madde": "%40 Metalik bakıra eşdeğer bakır oksiklorid + %6 Dimethomorp",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 g/100 L su",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ACS GLADIO 110 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ACS IGUANA 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "AGRILEX (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "AGRODONE (İMAL)",
+    "etken_madde": "500 g/l Metrafenone",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "20 ml/100 L su",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "AGİL EXTRA 100 EC (İTHAL)",
+    "etken_madde": "100 g/l Propaquizafop",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "50 ml/da Çıkış sonrası Kanyaş 25-40 cm iken",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "AKARDEX (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "AKROPOL 05 SG (İMAL)",
+    "etken_madde": "%5 Emamectin benzoate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "25 g/100 su.Larva",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ALGUNAS (İTHAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ALMARİNEİ® PLUS (İMAL)",
+    "etken_madde": "10 g/l Gibberellin A4/A7",
+    "hedef_hastalik": "Zararlı Yok (-)",
+    "grup": "Bitki Gelişim Düzenleyicisi (BGD)",
+    "dozaj": "200 ml/100 L. su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "AMALINE (İTHAL)",
+    "etken_madde": "266,6 g/l Metalik bakıra eşdeğer bazik bakır sülfat + 40 g/l Zoxamide",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 ml/100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "AMPEXIO (İTHAL)",
+    "etken_madde": "%25 Mandipropamid + %24 Zoxamide",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "50 g/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "APOLLO (İTHAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ARROGANT 50 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su (yumurta,larva,nimf)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "ARTSIL 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ARİVO 20 EC (İMAL)",
+    "etken_madde": "200 g/l Cypermethrin",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "25 ml / 100 lt. su larva",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ASALONİ (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ASTANA (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ASTRIS GOLD 200 SC (İTHAL)",
+    "etken_madde": "100 g/l Lambda-cyhalothrin + 100 g/l Lufenuron",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml / 100 lt su",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "AZUMO WG (İTHAL)",
+    "etken_madde": "%80 Kükürt",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit + Akarisit",
+    "dozaj": "400 g / 100 L su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "BAKAVİT 50 WP MAVİ BAKIR (İMAL)",
+    "etken_madde": "%50 Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 - 500 gr /100 lt su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BANDO 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "BARRAGE (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BEKCHI 5 SG (İMAL)",
+    "etken_madde": "%5 Emamectin benzoate",
+    "hedef_hastalik": "Bağ tripsleri (Rubiothrips vitis, Mycterothrips albidicornis, Mycterothrips tschirkunae, Thrips tabaci)",
+    "grup": "İnsektisit",
+    "dozaj": "50 g/100 L. su (Ergin-Larva)",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BELLMAC 5.7 WG (İTHAL)",
+    "etken_madde": "% 5.7 Emamectin benzoate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 g/100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BELOUKHA 680 EC (İTHAL)",
+    "etken_madde": "680 g/l Pelargonic Acid",
+    "hedef_hastalik": "Horozibiği (Amaranthus albus)",
+    "grup": "Herbisit",
+    "dozaj": "1,6 lt/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "BELT SC 480 (İTHAL)",
+    "etken_madde": "480 g/l Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "14 ml / 100 L su (larva)",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BENİDOR M SC 240 (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su (nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BLOCKADE (İTHAL)",
+    "etken_madde": "189,40 g/l Lavandulyl senecioate",
+    "hedef_hastalik": "Bağda unlubit (Planococcus ficus)",
+    "grup": "Feromon",
+    "dozaj": "6,5 ml/100 l su",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "BOHEM 200 SC (İMAL)",
+    "etken_madde": "200 g/l Fenazaquin",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l su",
+    "hasat_suresi": "28 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BORDO MIX TEZCAN 20 WG (İMAL)",
+    "etken_madde": "%20 Metalik bakıra eşdeğer bordo bulamacı",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "500 g/100 l su (yaz uygulaması), 3500 g/100 l su (kış uygulaması)",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BORDOTALİA (İTHAL)",
+    "etken_madde": "%20 Metalik bakıra eşdeğer bordo bulamacı",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "500 g/100 L su (yaz uygulaması) 3500 g/100 L su (kış uygulaması)",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BORMUS 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BREAKER™ 240 SC (İTHAL)",
+    "etken_madde": "240 g/l Sulfoxaflor",
+    "hedef_hastalik": "Turunçgil unlubiti (Planococcus citri)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml/100 L su nimf ergin**",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "BUSSO 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su (yumurta,larva,nimf)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "BİO-T PLUS (İTHAL)",
+    "etken_madde": "16000 IU/mg Bacillus thuringiensis var. kurstaki strain PB-54",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Biyolojik İnsektisit",
+    "dozaj": "200 ml/100 l + 1 kg şeker",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "BİOTEAM (İTHAL)",
+    "etken_madde": "",
+    "hedef_hastalik": "Bağ maymuncukları (Otiorhynchus spp.)",
+    "grup": "Biyolojik Mücadele Etmeni (Entomopatojen Nematod)",
+    "dozaj": "m2 başına 0,5 milyon Nematod Larvası",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "CANİZOX 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CHACHA 50 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CHEETAH (İMAL)",
+    "etken_madde": "200 g/l Glufosinate Ammonium Tuzu + 200 g/l MCPA + 40 g/l Diflufenican + 15 g/l Carfentrazone-ethyl",
+    "hedef_hastalik": "Yabani yulaf (Avena fatua)",
+    "grup": "Herbisit",
+    "dozaj": "75 ml/da (çıkış sonrası)",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "CHEPEN 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CHROMA 50 (İMAL)",
+    "etken_madde": "51,3 g/l Cyflufenamid",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "20 ml/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CLASH 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "COBRA SÜPER EW (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Köpekdişi ayrığı (Cynodon dactylon)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "COLLİS SC (İTHAL)",
+    "etken_madde": "200 g/l Boscalid + 100 g/l Kresoxim-methyl",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "30 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "COMISER 50 WP (İMAL)",
+    "etken_madde": "%50 Cymoxanil",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "60 g / 100 l su*",
+    "hasat_suresi": "28 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CONCİD 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CONTİER (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Nimf, ergin)*",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "CORAGEN 20 SC (İTHAL)",
+    "etken_madde": "200 g/l Chlorantraniliprole",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "15 ml/100 l su (yumurta)",
+    "hasat_suresi": "3 gün sofralık, 28 gün şaraplık,7 gün asma yaprağı",
+    "uyari": ""
+  },
+  {
+    "ad": "COSTAR (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "COSWEL 250 WG (İTHAL)",
+    "etken_madde": "% 25 Flazasulfuron",
+    "hedef_hastalik": "Sirken (Chenopodium album)",
+    "grup": "Herbisit",
+    "dozaj": "20 g/da Çıkış öncesi",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "COUNTER 50 CS (İMAL)",
+    "etken_madde": "50 g/l Lambda-cyhalothrin",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml/100 L su (Larva)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "COVELİN SC (İMAL)",
+    "etken_madde": "200 g/l Azoxystrobin + 125 g/l Difenoconazole",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "80 ml/ 100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "DANUA 50 WG (İMAL)",
+    "etken_madde": "%50 Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "50 g / 100 L su*",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "DECLERE 156 SC (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "DELEGATE 250 WG (İTHAL)",
+    "etken_madde": "%25 Spinetoram",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 g / 100 L su yumurta, larva**",
+    "hasat_suresi": "7 Gün (üzüm ve asma yaprağı)",
+    "uyari": ""
+  },
+  {
+    "ad": "DELOS (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "DEPRIVE EC 2,5 (İMAL)",
+    "etken_madde": "25 g/l Deltamethrin",
+    "hedef_hastalik": "Dürmece = Bağ pirali (Sparganothis pilleriana)",
+    "grup": "İnsektisit",
+    "dozaj": "50 ml / 100 lt su",
+    "hasat_suresi": "3 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "DIFORCE (İTHAL)",
+    "etken_madde": "%3,6 (E,Z)-7,9- Dodecadienyl acetate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon",
+    "dozaj": "50 sıkım yayıcı (50x1,6 g)/da (1 sıkım yayıcı/20 m2) (Sınır uygluaması hariç)",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "DİVAGO (İMAL)",
+    "etken_madde": "%20 Metalik bakıra eşdeğer bordo bulamacı",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "500 gr/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EDOR 240 SC (İTHAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL AKAVA (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL DİCO 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL ETUX (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL FENROX (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL FUMASTE SC (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL HEKZARUN 50 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EFDAL SİPROFEN SC 240 (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "EGESTA (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L  su (nimf, ergin)",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "EGNİT (İTHAL)",
+    "etken_madde": "60 g/l Carfentrazone-ethyl",
+    "hedef_hastalik": "Horozibiği (Amaranthus albus)",
+    "grup": "Herbisit + Desikant",
+    "dozaj": "100 ml/da Çıkış sonrası",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "EKHON 50 WG (İMAL)",
+    "etken_madde": "%50 Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "50 g/100 l su*",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ELICITOR (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EMAREBENO 02 EC (İMAL)",
+    "etken_madde": "20 g/l Emamectin benzoate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "60 ml/100 lt su Larva",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EMENDO (İTHAL)",
+    "etken_madde": "%15 Metalik bakıra eşdeğer bakır hidroksit + %15 Metalik bakıra eşdeğer bakır oksiklorid + %6 Valiphenal",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "250g /100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EMSORRİN (İTHAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ENTFUN (İMAL)",
+    "etken_madde": "400 g/l Dithianon + 100 g/l Trifloxystrobin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "60 ml/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ERSORİN 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "EUROGOLD (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EXAMIT 40 EC (İMAL)",
+    "etken_madde": "40 g/l Quizalofop-p-tefuryl",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "150 ml / da Kanyaşların aktif olarak büyüdüğü devre olan 15-20 cm boyda veya 4-5 yapraklı olduğu devre",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "EXCLAR 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EXODİA (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "EXPERT TEAM (İMAL)",
+    "etken_madde": "%39,75 Metalik bakıra eşdeğer bakır oksiklorid + %4,2 Cymoxanil",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 gr/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EXPLODER (İMAL)",
+    "etken_madde": "200 g/l Fenazaquin",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l su",
+    "hasat_suresi": "28",
+    "uyari": ""
+  },
+  {
+    "ad": "EXPLOİT (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "EXİREL 100 SE (İTHAL)",
+    "etken_madde": "100 g/l Cyantraniliprole",
+    "hedef_hastalik": "Bağ tripsleri (Rubiothrips vitis, Mycterothrips albidicornis, Mycterothrips tschirkunae, Thrips tabaci)",
+    "grup": "İnsektisit",
+    "dozaj": "75 ml / 100 l su",
+    "hasat_suresi": "7 gün (sofralık), 7 gün (asma yaprağı)",
+    "uyari": ""
+  },
+  {
+    "ad": "FALCON SC 240 (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "FANTOS 10 SC (İTHAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FARMSON SÜPER EW (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Köpekdişi ayrığı (Cynodon dactylon)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "FASCINATE (İTHAL)",
+    "etken_madde": "280 g/l Glufosinate-ammonium",
+    "hedef_hastalik": "Tarla sarmaşığı (Convolvulus arvensis)",
+    "grup": "Herbisit",
+    "dozaj": "500 ml/da çıkış sonrası",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "FELUTEN 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FIERO LIQUID (İMAL)",
+    "etken_madde": "361,1 g/l Metalik bakıra eşdeğer bakır hidroksit",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "100 ml/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FOLİAX 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su (Yumurta, larva, nimf)",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "FORMULA SUPER 5 EC (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "FORSET (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FRAGMAN 50 WG (İMAL)",
+    "etken_madde": "%50 Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "50 gr/ 100 L su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FRSVASTOC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "FYTOSAVE (İTHAL)",
+    "etken_madde": "12,5 g/l COS-OGA",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Biyolojik Fungisit",
+    "dozaj": "200 ml/100 L su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "GENAGRO SYGON 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "GENOOM 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "GREMEC 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "GURADOR (İMAL)",
+    "etken_madde": "%50 Trifloxystrobin",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "10 gr / 100 lt su",
+    "hasat_suresi": "35 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HAGAX (İTHAL)",
+    "etken_madde": "%14 Metalik bakıra eşdeğer bakır hidroksit + %14 Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "240 g/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HALT MD EGVM MESO (İTHAL)",
+    "etken_madde": "1063 mg, (7E,9Z)-7,9-Dodecadien-1-yl acetate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon",
+    "dozaj": "8 adet feromon yayıcı çubuk/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "HASIL 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEADLİNE MAX (İMAL)",
+    "etken_madde": "200 g/l Azoxystrobin + 125 g/l Difenoconazole",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "80 ml/100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKCAP 50 F (İMAL)",
+    "etken_madde": "500 g/l Captan",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 ml / 100 lt su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKTAŞ BARRİER® 35 WG (İMAL)",
+    "etken_madde": "%35 Metalaxyl",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "100g/100 l su",
+    "hasat_suresi": "42 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKTAŞ MİTRAL WG (İMAL)",
+    "etken_madde": "%60 Fosetyl-Al + %4 Famoxadone",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "250 g/100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKTAŞ PLUTO WG (İMAL)",
+    "etken_madde": "%45,6 Cymoxanil + %15 Trifloxystrobin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "50 g/100 L su *",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKTAŞ VOLON (İMAL)",
+    "etken_madde": "%35 Metalik bakıra eşdeğer bakır hidroksit",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "175 gr / 100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEKTHİON WP 25 (İMAL)",
+    "etken_madde": "%25 Malathion",
+    "hedef_hastalik": "Bağ üvezi (Erythroneura adanae)",
+    "grup": "İnsektisit",
+    "dozaj": "300 g/100 lt.su",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "HEYKEL 200 SC (İMAL)",
+    "etken_madde": "200 g/l Fenazaquin",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l su",
+    "hasat_suresi": "28",
+    "uyari": ""
+  },
+  {
+    "ad": "HYPNOSE 05 WG (İMAL)",
+    "etken_madde": "%5 Emamectin benzoate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "25 g/100 L. su (Larva)",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "IMPOSE (İMAL)",
+    "etken_madde": "%57 Metiram + %4,8 Cymoxanil",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 g /100 l su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ISOMEALY PF (İTHAL)",
+    "etken_madde": "158 mg (5 methyl-2-(1-methylethenyl)-4-hexen-1-yl 3-methyl-2-butenoate)",
+    "hedef_hastalik": "Bağda unlubit (Planococcus ficus)",
+    "grup": "Feromon",
+    "dozaj": "30 Feromon yayıcı/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "ISONET LTT (İTHAL)",
+    "etken_madde": "375 mg (E,Z)-7,9-Dodecadienyl acetate Feromon çubuğu",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon",
+    "dozaj": "25 adet feromon yayıcı /da (Sınır  ve tampon uygulaması hariç)",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "JOSH 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "KANEMITE SC (İTHAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KARACHAI (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KARATHANE GOLD (İTHAL)",
+    "etken_madde": "350 g/l Meptyldinocap",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "50 ml / 100 l su",
+    "hasat_suresi": "35 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KARZOLE 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, Larva, Nimf)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "KASTRUP (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KASURİ (İTHAL)",
+    "etken_madde": "300 g/L Pyriofenone",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "30 ml/100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KINGDOM SC (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KOCTEL (İMAL)",
+    "etken_madde": "%35 Metalik bakıra eşdeğer bakır hidroksit",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "175 g/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KORFOSAT PREMİUM (İMAL)",
+    "etken_madde": "360 g/l Glyphosate asite eşdeğer Glyphosate Diammonium Tuzu",
+    "hedef_hastalik": "Sirken (Chenopodium album)",
+    "grup": "Herbisit",
+    "dozaj": "500 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "KORITUS (İMAL)",
+    "etken_madde": "%50 Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "50 g/100 l su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KORPOLLO 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KORVELA SC (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KOTOOX 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, ergin)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "KUASA (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KURAME FORTE (İTHAL)",
+    "etken_madde": "%25 Metalik bakıra eşdeğer bakır oksiklorid + %4 Cymoxanil",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 g/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KYLEO 400 SL (İTHAL)",
+    "etken_madde": "240 g/l Glyphosate Asit (323,9 g/l Glyphosate Isopropylamin Tuzuna eşdeğer) + 160 g/l 2,4-D Asit (371 g/l Alkylamidopropyl Dimethil Amin Tuzuna eşdeğer))",
+    "hedef_hastalik": "Bozot (Heliotropium europeum)",
+    "grup": "Herbisit",
+    "dozaj": "500 ml/da çıkış sonrası",
+    "hasat_suresi": "90 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KİLİMANJARO 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "KİNGSOR 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "KİSUKE WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "LARRES (İMAL)",
+    "etken_madde": "480 g/l Spinosad",
+    "hedef_hastalik": "Bağ tripsleri (Anaphothrips vitis, Drepanothrips reuter, Haplothrips globiceps)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml / 100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "LARVANEM (İTHAL)",
+    "etken_madde": "",
+    "hedef_hastalik": "Bağ maymuncukları (Otiorhynchus spp.)",
+    "grup": "Biyolojik Mücadele Etmeni",
+    "dozaj": "500 000 Nematod/Metrekare",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "LEGATO LENNS (İTHAL)",
+    "etken_madde": "250 g/l Glyphosate asite eşdeğer Glyphosate Isopropylamin Tuzu + 40 g/l Diflufenican",
+    "hedef_hastalik": "Bozot (Heliotropium europeum)",
+    "grup": "Herbisit",
+    "dozaj": "400 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "LIFELINE (İTHAL)",
+    "etken_madde": "160 g/l Glufosinate-ammonium + 202 g/l Glyphosate IPA tuzu",
+    "hedef_hastalik": "Sirken (Chenopodium album)",
+    "grup": "Herbisit",
+    "dozaj": "300 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "LOBETEC (İTHAL)",
+    "etken_madde": "210 mg (E,Z)-7,9-Dodecadien-1-yl-acetate Feromon çubuğu",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon+Tuzak",
+    "dozaj": "40 Adet feromon kapsül/da (çiftleşmeyi engelleme metodu)",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "LUSEN SC 500 (İTHAL)",
+    "etken_madde": "250 g/l Fluopyram+ 250 g/l Trifloxystrobin",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "20 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "LYBEER (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "LİVO (İTHAL)",
+    "etken_madde": "600 g/l Orange oil",
+    "hedef_hastalik": "Bağda unlubit (Planococcus ficus)",
+    "grup": "İnsektisit",
+    "dozaj": "200 ml/100 L su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "MAKOM 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MALAMALA 150 SC (İMAL)",
+    "etken_madde": "150 g/l Indoxacarb",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "25 ml/100 lt su larva",
+    "hasat_suresi": "3 gün sofralık üzüm - 10 gün şaraplık üzüm(Tüketim amaçlı bağ yaprağı hasadı yapılacak alanlarda kullanılmaz)",
+    "uyari": ""
+  },
+  {
+    "ad": "MASS CAPTAN (İMAL)",
+    "etken_madde": "%50 Captan",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 gr / 100 lt su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MASTERCOP (İTHAL)",
+    "etken_madde": "65,82 g/l Metalik bakıra eşdeğer bakır sülfat",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "125 g/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MATRIX 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MAVRİK 2 F (İTHAL)",
+    "etken_madde": "240 g/l Tau-fluvalinate",
+    "hedef_hastalik": "Bağ tripsleri (Rubiothrips vitis, Mycterothrips albidicornis, Mycterothrips tschirkunae, Thrips tabaci)",
+    "grup": "İnsektisit",
+    "dozaj": "30 ml/100 L su larva, ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MELODİKA WG 49 (İTHAL)",
+    "etken_madde": "%40,6 Metalik Bakıra Eşdeğer Bakır Oksiklorid + %8,4 Iprovalicarb",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "175 g / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MENTA MEDIAN (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MERPAN 80 WG (İTHAL)",
+    "etken_madde": "%80 Captan",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "150 g/100 L su*",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MIDFIELD 5 EC (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "MOLTOVIN 225 SC (İTHAL)",
+    "etken_madde": "190 g/l Metalik Bakıra eşdeğer bazik bakır sülfat + 35 g/l Cymoxanil",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "350 ml/100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MORPHEUS 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "MOSECAN (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "MUREF CS 300 (İTHAL)",
+    "etken_madde": "300 g/l Spiroxamine",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "100 ml/100 L su",
+    "hasat_suresi": "14 gün (Şaraplık üzümde 35 gün)",
+    "uyari": ""
+  },
+  {
+    "ad": "NAOMİ (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NAZATEM® TOP (İMAL)",
+    "etken_madde": "200 g/l Azoxystrobin + 125 g/l Difenoconazole",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "80 ml/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NEWPORT 50 EC (İTHAL)",
+    "etken_madde": "50 g/l Lambda-cyhalothrin",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml /100 lt.su larva(Tüketim Amaçlı Bağ Yaprağı Hasadı Yapılacak Bağ Alanlarında Kullanılamaz.)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NISSOMITE (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NO-PANİC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, Larva, Nimf)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "NONSORRUN 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NORDOX 75 WG (İTHAL)",
+    "etken_madde": "%75 Metalik bakıra eşdeğer bakır oksit",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "125 g / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NOVAMİTE (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "NİMBECİDİNE (İTHAL)",
+    "etken_madde": "790 g/l Neem Yağı + 0,3 g/l Azadirachtin A",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "500 ml / 100 L su",
+    "hasat_suresi": "3 gün (üzüm) - 3 gün (bağ yaprağı)",
+    "uyari": ""
+  },
+  {
+    "ad": "NİMLİNE (İMAL)",
+    "etken_madde": "250 g/l Bupirimate",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "40 ml/100 l su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "OLİMPİA (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su (nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "OLİVENZA 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ORVEGO (İTHAL)",
+    "etken_madde": "300 g/l Ametoctradin + 225 g/l Dimethomorph",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "100 ml / 100 l su",
+    "hasat_suresi": "10 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "OXICRON 50 (İTHAL)",
+    "etken_madde": "%50 Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağ antraknozu (Elsinoe ampelina)",
+    "grup": "Fungisit",
+    "dozaj": "300 g/100 l su 1. ilaçlama 500 g/100 l su Diğer ilaçlamalarda",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "OXİ-CUP 50 WG (İTHAL)",
+    "etken_madde": "%50 Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 - 500 gr /100 lt su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PARADISE 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (yumurta,larva,nimf)",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "PARROW (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su (nimf, ergin)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PAYARTİS 250 SC (İMAL)",
+    "etken_madde": "250 g/l Azoxystrobin",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "75 ml / 100 lt su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PEAK 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PIRECRIS (İTHAL)",
+    "etken_madde": "20 g/l Pyrethrin",
+    "hedef_hastalik": "Yaprakpireleri (Asymmetrasca decedens, Empoasca decipiens)",
+    "grup": "İnsektisit",
+    "dozaj": "150 ml/100 L su*",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PLATİN CAPTAN 50 WP (İMAL)",
+    "etken_madde": "%50 Captan",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "250 g / 100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "POLE 500 SC (İMAL)",
+    "etken_madde": "500 g/l Clofentezine",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "56 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "POLYDOCTOR ® (İTHAL)",
+    "etken_madde": "Pythium oligandrum strain M1, 1x10 üzeri 6 oospor/1 gr",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Biyolojik Fungisit",
+    "dozaj": "30 g/100 L su",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "PRESTICOR 600 SC (İTHAL)",
+    "etken_madde": "600 g/l Chlorantraniliprole",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "5 ml / 100 L su (yumurta, larva)",
+    "hasat_suresi": "3 gün (sofralık), 28 gün (şaraplık), 7 gün (asma yaprağı)",
+    "uyari": ""
+  },
+  {
+    "ad": "PRIVEST® SC (İTHAL)",
+    "etken_madde": "300 g/LPhosphorous Acid (mono ve di-potasyum tuzları) + 75 g/L Ametoctradin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "400 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PRO-ABDİL (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PROCLAİM OPTİ UV 05 WG (İTHAL)",
+    "etken_madde": "%5 Emamectin benzoate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 g/100 l su (Larva)",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PRODIGY™ 240 SC (İTHAL)",
+    "etken_madde": "240 g/l Methoxyfenozide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "40 ml/100 lt su (larva, Yumurta)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PROFILER WG 71,1 (İTHAL)",
+    "etken_madde": "%66,7 Fosetyl-Al + %4,44 Fluopicolide",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "250 g /100 l su",
+    "hasat_suresi": "28",
+    "uyari": ""
+  },
+  {
+    "ad": "PROGUARD 600 (İTHAL)",
+    "etken_madde": "600 g/l Phosphorous Acid (mono ve di-potasyum tuzları)",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 ml/100 L su",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "PROTONE 20 SG (İTHAL)",
+    "etken_madde": "% 20 S-Absisik asit",
+    "hedef_hastalik": "Zararlı Yok (-)",
+    "grup": "Bitki Gelişim Düzenleyicisi (BGD)",
+    "dozaj": "120 ml/100 lt su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "PRULANT 156 SC (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "PİL-ZUGO (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "PİRETRO VERDE 5 EC (İTHAL)",
+    "etken_madde": "46,5 g/l Pyrethrin",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "64 ml/100 L su*",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "QUADRİS MAXX (İTHAL)",
+    "etken_madde": "200 g/l Azoxystrobin + 125 g/l Difenoconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "80 ml/100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "QUALY 300 EC (İTHAL)",
+    "etken_madde": "300 g/l Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "100 ml/100 l su",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "RAIDER SC 240 (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "RAINCALL SC (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "RANMAN TOP (İTHAL)",
+    "etken_madde": "160 g/l Cyazofamid",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "50 ml / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "REDRUM 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "REGEV (İTHAL)",
+    "etken_madde": "400 g/l Tea tree oil + 200 g/l Difenoconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "40 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "REIKON (İMAL)",
+    "etken_madde": "200 g/l Azoxystrobin + 80 g/l Cyproconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "50 ml/100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "REVOLVER (İMAL)",
+    "etken_madde": "%5 Emamectin benzoate",
+    "hedef_hastalik": "Bağ tripsleri (Rubiothrips vitis, Mycterothrips albidicornis, Mycterothrips tschirkunae, Thrips tabaci)",
+    "grup": "İnsektisit",
+    "dozaj": "50 g/100 L. su (Larva)",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "REVYONA (İTHAL)",
+    "etken_madde": "75 g/l Mefentrifluconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "125 ml / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "RITREAP % 5 EW (İTHAL)",
+    "etken_madde": "51,3 g/l Cyflufenamid",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "20 ml / 100 l su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ROTRAZON 240 SC (İTHAL)",
+    "etken_madde": "160 g/l Tebuconazole + 80 g/l Azoxystrobin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "125 ml/100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ROUNDUP STAR (İTHAL)",
+    "etken_madde": "441 g/l Glyphosate Potasyum Tuzu",
+    "hedef_hastalik": "KAMIŞ (Phragmites austrialis)",
+    "grup": "Herbisit",
+    "dozaj": "1000 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "ROYFLUB 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "RUFAST 75 EW (İTHAL)",
+    "etken_madde": "75 g/l Acrinathrin",
+    "hedef_hastalik": "Bağ tripsleri (Rubiothrips vitis, Mycterothrips albidicornis, Mycterothrips tschirkunae, Thrips tabaci)",
+    "grup": "İnsektisit+Akarisit",
+    "dozaj": "75 mg/100 L su (larva,ergin)",
+    "hasat_suresi": "28 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "RUFUS (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SAFA LUMİNA 200 SC (İMAL)",
+    "etken_madde": "100 g/l Lambda-cyhalothrin + 100 g/l Lufenuron",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml / 100 l su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SAFA VANTAGE EC (İMAL)",
+    "etken_madde": "480 g/l Metalaxyl-M",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "100 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SCOROLLAN 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "SELDONY 20 WP (İMAL)",
+    "etken_madde": "%20 Tebufenpyrad",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "İnsektisit+Akarisit",
+    "dozaj": "50 gr / 100 l su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SENCY (İMAL)",
+    "etken_madde": "156 g/l Acequinocyl",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "125 ml/ 100 l su (ergin, larva ve nimf)",
+    "hasat_suresi": "14 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SERCADİS (İTHAL)",
+    "etken_madde": "300 g/l Fluxapyroxad",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "15 ml / 100 l su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SERIFEL (İTHAL)",
+    "etken_madde": "Bacillus amyloliquefaciens ırkı MBI 600 >5.5x10 üzeri 10 cfu/g",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Biyolojik Fungisit",
+    "dozaj": "50 g/100 L su",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "SERRADO WG (İTHAL)",
+    "etken_madde": "%50 Bacillus thuringiensis",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Biyolojik İnsektisit",
+    "dozaj": "100 g/100 l su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "SEVİLLE 50 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "SEZOX (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SHAKO EC (İMAL)",
+    "etken_madde": "51,4 g/l Metalik Bakıra eşdeğer Yağ ve Rosin Asitlerinin Bakır Tuzları",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 ml / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SHELTER (İTHAL)",
+    "etken_madde": "500 g/l Spiroxamine",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "60 ml/100 L su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SHOSHI (İTHAL)",
+    "etken_madde": "%10 hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 g/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SIVANTO SL 200 (İTHAL)",
+    "etken_madde": "200 g/l Flupyradifurone",
+    "hedef_hastalik": "Yaprakpireleri (Asymmetrasca decedens, Empoasca decipiens)",
+    "grup": "İnsektisit",
+    "dozaj": "60 ml /100 L su (yumurta, nimf-ergin)",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SNORLANT 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 L Su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "SORADO (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SORENTO (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Köpekdişi ayrığı (Cynodon dactylon)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml/da Köpek dişi 15-20, kanyaş 2-3 kardeşte iken",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "SUBVERT (İTHAL)",
+    "etken_madde": "185.5 g/l (E,Z)-7,9-Dodecadien-1- yl Acetate",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon",
+    "dozaj": "11 ml/100 l su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "SUPERNOSAD 240 SC (İMAL)",
+    "etken_madde": "240 g/l Spinosad",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "20 ml / 100 l su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SUPRAKAL (İMAL)",
+    "etken_madde": "380 g/l Kalsiyum polisülfür",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit + Akarisit",
+    "dozaj": "1. ilaçlama:1000 ml/100 l su",
+    "hasat_suresi": "-",
+    "uyari": ""
+  },
+  {
+    "ad": "SUUM 10 SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "SYDORF 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 l Su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TAKUMI (İTHAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TALAV 20 WP (İMAL)",
+    "etken_madde": "%20 Tebufenpyrad",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 gr / 100 l su",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TALON SÜPER EW (İMAL)",
+    "etken_madde": "50 g/l Quizalofop-p-ethyl",
+    "hedef_hastalik": "Kanyaş (Sorghum halepense)",
+    "grup": "Herbisit",
+    "dozaj": "100 ml / da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "TANUSELLA (İTHAL)",
+    "etken_madde": "400 g/l Kükürt + 15 g/l Penconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "175 ml / 100 l su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TARACLİA (İTHAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TARAS SC 240 (İMAL)",
+    "etken_madde": "240 g/l Spirodiclofen",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 L. su",
+    "hasat_suresi": "14 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "TENACE ® WG (İTHAL)",
+    "etken_madde": "%60 Kükürt + %1,5 Tetraconazole",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "175 g/ 100 l su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TETRAMET (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "THANOS 50 WP (İTHAL)",
+    "etken_madde": "%50 Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "300 - 500 gr /100 lt su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "THEMİS (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 lSu (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "THEORY® (İMAL)",
+    "etken_madde": "150 g/l Cyprodinil + 100 g/l Fludioxonil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "125 ml/100 lt su",
+    "hasat_suresi": "3 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "THIO 80 WG (İMAL)",
+    "etken_madde": "%80 Kükürt",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "400 g/100 l su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "THIOPRON (İTHAL)",
+    "etken_madde": "825 g/l Kükürt",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "385 ml / 100 l su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "TOP-COPP 5 E (İMAL)",
+    "etken_madde": "51,4 g/l Metalik Bakıra eşdeğer Yağ ve Rosin Asitlerinin Bakır Tuzları",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 ml / 100 L su",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TOPGUARD EQ (İTHAL)",
+    "etken_madde": "296 g/l Azoxystrobin + 218 g/l Flutriafol",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "50 ml/100 l su",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TOUCHDOWN PREMIUM (İTHAL)",
+    "etken_madde": "360 g/l Glyphosate asite eşdeğer Glyphosate Diammonium Tuzu",
+    "hedef_hastalik": "Sirken (Chenopodium album)",
+    "grup": "Herbisit",
+    "dozaj": "500 ml/da",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "TRALOKS 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su (larva)",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TRICHO-POINT (İMAL)",
+    "etken_madde": "",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Biyolojik Mücadele Etmeni",
+    "dozaj": "30-40 adet /m2",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "TRUEGOLD (İMAL)",
+    "etken_madde": "50 g/l Fenpyroximate",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "75 ml/ 100 l su larva, nimf ve ergin",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TUNGA (İTHAL)",
+    "etken_madde": "222 g/l Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 ml/100 l su",
+    "hasat_suresi": "Üzüm 14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TUTARİPS (İMAL)",
+    "etken_madde": "250 g/l Etofenprox + 100 g/l Pyriproxyfen",
+    "hedef_hastalik": "Bağda unlubit (Planococcus ficus)",
+    "grup": "İnsektisit",
+    "dozaj": "50 ml/ 100 L su (larva, nimf, ergin)",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TWİSTER 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/ 100 lSu (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "TİMOREX GOLD (İTHAL)",
+    "etken_madde": "222,5 g/l Tea tree oil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "150 ml/100 L su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "UPHOLD 360™ SC (İTHAL)",
+    "etken_madde": "300 g/l Methoxyfenozide + 60 g/l Spinetoram",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 ml/100 L su yumurta, larva",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "VACCIPLANT (İTHAL)",
+    "etken_madde": "45 g/l Laminarin",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "300 ml / 100 L su",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "VALDES 20 WG (İMAL)",
+    "etken_madde": "%20 Flubendiamide",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "İnsektisit",
+    "dozaj": "30 g/100 l su, larva",
+    "hasat_suresi": "14 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "VECTOR 50 WG (İMAL)",
+    "etken_madde": "%50 Cyprodinil",
+    "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
+    "grup": "Fungisit",
+    "dozaj": "50 g/100 l su",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "VINABEL® (İTHAL)",
+    "etken_madde": "300 g/L Zoxamide+ 40 g/L Oxathiapiprolin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "70 ml/100 L su*",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "VİVANDO (İTHAL)",
+    "etken_madde": "500 g/l Metrafenone",
+    "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
+    "grup": "Fungisit",
+    "dozaj": "20ml/100l su",
+    "hasat_suresi": "10 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "XSARA (İTHAL)",
+    "etken_madde": "%15 Metalik Bakıra Eşdeğer Bakır Hidroksit + %15 Metalik Bakıra Eşdeğer Bakır Oksiklorid + %5 Benalaxyl - M",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "240 g/100 L su",
+    "hasat_suresi": "28 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "YOKSORRUN 5 EC (İMAL)",
+    "etken_madde": "50 g/l Hexythiazox",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "50 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ZAZOLRAN (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ZOMBIE SC (İMAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su",
+    "hasat_suresi": "7 GÜN",
+    "uyari": ""
+  },
+  {
+    "ad": "ZOOM 10 SC (İTHAL)",
+    "etken_madde": "110 g/l Etoxazole",
+    "hedef_hastalik": "İki noktalı kırmızıörümcek (Tetranychus urticae)",
+    "grup": "Akarisit",
+    "dozaj": "25 ml/ 100 l su (Yumurta, larva, nimf)",
+    "hasat_suresi": "7 Gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ZOOMER (İTHAL)",
+    "etken_madde": "360 g/l Glyphosate asite eşdeğer Glyphosate Isopropylamin Tuzu + 30 g/l Oxyfluorfen",
+    "hedef_hastalik": "Kırmızı köklü tilkikuyruğu (Amaranthus retroflexus)",
+    "grup": "Herbisit",
+    "dozaj": "200 ml/da yabancı otların genç ve aktif olarak büyüdüğü devrede. Tüketim amaçlı bağ yaprağı hasadı yapılacak bağ alanlarında kullanılmaz.",
+    "hasat_suresi": "",
+    "uyari": ""
+  },
+  {
+    "ad": "ZORVEC VINABRIA® (İTHAL)",
+    "etken_madde": "500 g/L Folpet+ 10 g/L Oxathiapiprolin",
+    "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 ml/100 L su",
+    "hasat_suresi": "56 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "ZZ-CUPROCOL (İTHAL)",
+    "etken_madde": "700 g/l Metalik bakıra eşdeğer bakır oksiklorid",
+    "hedef_hastalik": "Bağda ölükol (Phomopsis viticola)",
+    "grup": "Fungisit",
+    "dozaj": "200 ml /100 L su (Yaz uygulaması)",
+    "hasat_suresi": "21 gün",
+    "uyari": ""
+  },
+  {
+    "ad": "https://bku.tarimorman.gov.tr/Details/-1",
+    "etken_madde": "10 g/l Azadirachtin A",
+    "hedef_hastalik": "Kahverengi kokarca (Halyomorpha halys)",
+    "grup": "İnsektisit",
+    "dozaj": "300 ml/da",
+    "hasat_suresi": "Üzüm ve asma yaprağı :7 gün , 5.10.2025 tarihinde geçici tavsiye süresi bitmiştir",
+    "uyari": ""
+  },
+  {
+    "ad": "İZLEM LB (İTHAL)",
+    "etken_madde": "0.0039 g(E,Z)-7,9-dodecadien-1-yl acetate+0.0014 g (E,Z)7,9-Dodecadien-1-ol+0.00035 g (Z)-9-Dodecen-1-yl acetate+tuzak",
+    "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
+    "grup": "Feromon+Tuzak",
+    "dozaj": "1 adet tuzak/ha izleme (monitör ) amaçlı",
+    "hasat_suresi": "",
+    "uyari": ""
+  }
 ]
