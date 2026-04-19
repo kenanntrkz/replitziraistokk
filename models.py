@@ -42,16 +42,22 @@ class Bag(db.Model):
         return query.count()
     
     def toplam_su_kullanimi(self, yil=None):
-        """Belirli bir yıla ait (veya tüm) ilaçlamada kullanılan toplam su miktarını döndürür."""
-        sonuc = db.session.query(db.func.sum(IlacKullanim.su_miktari)).filter(IlacKullanim.bag_id == self.id)
-        
+        """Belirli bir yıla ait (veya tüm) ilaçlamada kullanılan toplam su miktarını döndürür.
+        Aynı tank/uygulamadaki farklı ilaç satırları tek uygulama sayılır (su 1× toplanır)."""
+        q = IlacKullanim.query.filter(IlacKullanim.bag_id == self.id)
         if yil:
             yil_baslangic = datetime.datetime(year=yil, month=1, day=1)
             yil_bitis = datetime.datetime(year=yil+1, month=1, day=1)
-            sonuc = sonuc.filter(IlacKullanim.tarih >= yil_baslangic, IlacKullanim.tarih < yil_bitis)
-            
-        toplam = sonuc.scalar()
-        return toplam if toplam else 0
+            q = q.filter(IlacKullanim.tarih >= yil_baslangic, IlacKullanim.tarih < yil_bitis)
+        gruplar = {}
+        for k in q.all():
+            if k.tank_id:
+                key = ('t', k.tank_id)
+            else:
+                dk = k.tarih.strftime('%Y%m%d%H%M') if k.tarih else 'x'
+                key = ('d', k.bag_id, dk)
+            gruplar[key] = k.su_miktari or 0
+        return sum(gruplar.values())
         
     def taral_sayisi(self, yil=None):
         """Belirli bir yıla ait (veya tüm) taral sayısını döndürür. (400lt/dönüm baz alınarak)"""
