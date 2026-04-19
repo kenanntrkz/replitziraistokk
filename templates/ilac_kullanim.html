@@ -19,10 +19,19 @@
         {% if ilaclar %}
         <form method="POST" action="{{ url_for('ilac_kullanim') }}">
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="su_miktari" class="form-label">Su Miktarı (Litre)</label>
                     <input type="number" step="0.01" class="form-control" id="su_miktari" name="su_miktari" required placeholder="Örn: 400">
                     <small class="text-muted">Kullanılan toplam su miktarını litre olarak girin</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="bag_id" class="form-label">Bağ Seçin</label>
+                    <select class="form-select" id="bag_id" name="bag_id">
+                        <option value="">-- Bağ Seçin (Opsiyonel) --</option>
+                        {% for bag in baglar %}
+                        <option value="{{ bag.id }}">{{ bag.ad }} ({{ bag.alan }} dönüm)</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
 
@@ -59,35 +68,50 @@
     </div>
 </div>
 
-<!-- Son Kullanımlar -->
+<!-- Son Kullanımlar (Gruplu) -->
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İlaç Kullanımları</h5>
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İlaç Kullanımları (Son 10 Uygulama)</h5>
     </div>
     <div class="card-body">
-        {% if son_kullanimlar %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Tarih</th>
-                        <th>İlaç</th>
-                        <th>Kullanılan Miktar</th>
-                        <th>Su Miktarı</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for kullanim in son_kullanimlar %}
-                    <tr>
-                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
-                        <td>{{ kullanim.ilac.ad }}</td>
-                        <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.ilac.birim }}</td>
-                        <td>{{ kullanim.su_miktari }} lt</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        {% if son_grup_kullanimlari %}
+        {% for grup in son_grup_kullanimlari %}
+        <div class="card mb-3 border-secondary">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    <strong>
+                        {% if grup.tr_tarih %}{{ grup.tr_tarih.strftime('%d.%m.%Y %H:%M') }}
+                        {% else %}{{ grup.tarih.strftime('%d.%m.%Y %H:%M') }}{% endif %}
+                    </strong>
+                    {% if grup.bag_adi %}
+                    &nbsp;·&nbsp;<i class="fas fa-tree me-1"></i>{{ grup.bag_adi }}
+                    {% endif %}
+                </div>
+                <span class="badge bg-info text-dark">
+                    <i class="fas fa-tint me-1"></i>{{ grup.su_miktari }} lt su
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>İlaç</th>
+                            <th class="text-end">Kullanılan Miktar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ilac_kayit in grup.ilaclar %}
+                        <tr>
+                            <td>{{ ilac_kayit.ilac.ad }}</td>
+                            <td class="text-end">{{ ilac_kayit.kullanilan_miktar|round(2) }} {{ ilac_kayit.ilac.birim }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+        {% endfor %}
         {% else %}
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i> Henüz ilaç kullanım kaydı bulunmuyor.

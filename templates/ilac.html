@@ -72,6 +72,31 @@
                 </div>
             </div>
             <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="birim_fiyat" class="form-label">Birim Fiyat (₺)</label>
+                    <input type="number" step="0.01" class="form-control" id="birim_fiyat" name="birim_fiyat" placeholder="örn. 120">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="alim_tarihi" class="form-label">Alım Tarihi</label>
+                    <input type="date" class="form-control" id="alim_tarihi" name="alim_tarihi">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="son_kullanma_tarihi" class="form-label">SKT</label>
+                    <input type="date" class="form-control" id="son_kullanma_tarihi" name="son_kullanma_tarihi">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="lot_no" class="form-label">Lot / Parti No</label>
+                    <input type="text" class="form-control" id="lot_no" name="lot_no">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="acilma_tarihi" class="form-label">Açılma Tarihi</label>
+                    <input type="date" class="form-control" id="acilma_tarihi" name="acilma_tarihi">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="tekrar_araligi_gun" class="form-label">Tekrar Aralığı (gün)</label>
+                    <input type="number" min="0" class="form-control" id="tekrar_araligi_gun" name="tekrar_araligi_gun" placeholder="ör: 7">
+                    <div class="form-text">Mildiyö tipik 7-10 gün. Boş bırakılırsa hatırlatma kapalı.</div>
+                </div>
                 <div class="col-12 mb-3">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="kaydet_json" name="kaydet_json" checked>
@@ -86,56 +111,174 @@
     </div>
 </div>
 
+{# Özet metrikleri ve kritik ilaç listesi #}
+{% set toplam = ilaclar|length %}
+{% set kritikler = [] %}
+{% for il in ilaclar %}
+    {% set _h = ilac_hesaplar.get(il.id, {}) %}
+    {% if (il.min_stok and il.miktar < il.min_stok) or _h.get('dusuk') %}{% set _ = kritikler.append(il) %}{% endif %}
+{% endfor %}
+{% set gruplar = ilaclar|map(attribute='grup')|reject('none')|reject('equalto','')|unique|list|sort %}
+
+<!-- Özet Kartları -->
+<div class="row g-3 mb-3" id="ilacOzet">
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-primary-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Toplam</div>
+                <div class="fs-3 fw-bold text-primary"><span id="ozet-toplam">{{ toplam }}</span> <small class="text-muted fs-6">ilaç</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-danger-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Kritik / Düşük</div>
+                <div class="fs-3 fw-bold text-danger"><span id="ozet-kritik">{{ kritikler|length }}</span> <small class="text-muted fs-6">ilaç</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-success-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Grup Sayısı</div>
+                <div class="fs-3 fw-bold text-success">{{ gruplar|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-info-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Gösterilen</div>
+                <div class="fs-3 fw-bold text-info"><span id="ozet-gosterilen">{{ toplam }}</span> <small class="text-muted fs-6">satır</small></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if kritikler %}
+<!-- Kritik Stok Uyarı Bandı -->
+<div class="alert alert-danger d-flex align-items-center flex-wrap mb-3" role="alert">
+    <i class="fas fa-triangle-exclamation fs-4 me-2"></i>
+    <strong class="me-2">{{ kritikler|length }} ilaç kritik / düşük seviyede:</strong>
+    <span class="flex-grow-1">
+        {% for k in kritikler %}
+            <a href="#" class="badge bg-danger text-decoration-none me-1 kritik-chip" data-ilac-id="{{ k.id }}">{{ k.ad }} ({{ k.miktar }} {{ k.birim }})</a>
+        {% endfor %}
+    </span>
+    <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="filterKritikBtn">
+        <i class="fas fa-filter me-1"></i>Sadece kritik/düşük göster
+    </button>
+</div>
+{% endif %}
+
+<!-- Filtre ve Arama Çubuğu -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="ilacAra" placeholder="Ad / etken madde / hastalıkta ara...">
+                    <button type="button" class="btn btn-outline-secondary" id="ilacAraTemizle" title="Temizle"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="hastalikFilter">
+                    <option value="">Tüm hastalık / zararlı</option>
+                    {% for label, key in hastalik_dropdown %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check form-switch pt-2">
+                    <input class="form-check-input" type="checkbox" id="kritikOnly">
+                    <label class="form-check-label" for="kritikOnly">Sadece kritik / düşük</label>
+                </div>
+            </div>
+            <div class="col-md-2 text-md-end">
+                <button type="button" class="btn btn-outline-success btn-sm" id="csvExportBtn">
+                    <i class="fas fa-file-excel me-1"></i>CSV Aktar
+                </button>
+            </div>
+        </div>
+        <div class="mt-2 d-flex flex-wrap gap-1" id="grupFiltreBar">
+            <button type="button" class="btn btn-sm btn-primary grup-btn active" data-grup="">Tümü <span class="badge bg-light text-dark ms-1">{{ toplam }}</span></button>
+            {% for g in gruplar %}
+            <button type="button" class="btn btn-sm btn-outline-secondary grup-btn" data-grup="{{ g }}">{{ g }} <span class="badge bg-secondary ms-1">{{ ilaclar|selectattr('grup','equalto',g)|list|length }}</span></button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- İlaç Listesi -->
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut İlaçlar ({{ ilaclar|length }})</h5>
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut İlaçlar</h5>
     </div>
     <div class="card-body">
         {% if ilaclar %}
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover" id="ilacTable">
                 <thead>
                     <tr>
-                        <th>İlaç Adı</th>
-                        <th>Grup</th>
+                        <th class="sortable" data-sort="ad" style="cursor:pointer">İlaç Adı <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort="grup" style="cursor:pointer">Grup <i class="fas fa-sort text-muted small"></i></th>
                         <th>Etken Madde</th>
                         <th>Zararlı / Hastalık</th>
-                        <th>Stok</th>
+                        <th class="sortable" data-sort="miktar" style="cursor:pointer">Stok <i class="fas fa-sort text-muted small"></i></th>
                         <th>Dozu</th>
-                        <th>Hasat Süresi</th>
-                        <th>Uyarı</th>
-                        <th>Uygulama Kapasitesi</th>
+                        <th>Hasat</th>
+                        <th class="sortable" data-sort="son" style="cursor:pointer">Son Uygulama <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort="taral" style="cursor:pointer">Kapasite <i class="fas fa-sort text-muted small"></i></th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ilac in ilaclar %}
-                    <tr>
-                        <td><strong>{{ ilac.ad }}</strong></td>
+                    {% set h = ilac_hesaplar.get(ilac.id, {}) %}
+                    {% set son = ilac_son_uygulama.get(ilac.id) %}
+                    {% set stok_kritik = (ilac.min_stok and ilac.miktar < ilac.min_stok) %}
+                    {% set kapasite_dusuk = h.get('dusuk') %}
+                    {% set kritik = stok_kritik or kapasite_dusuk %}
+                    <tr class="ilac-row {% if kritik %}table-danger-subtle{% endif %}"
+                        data-ilac-id="{{ ilac.id }}"
+                        data-ad="{{ ilac.ad|lower }}"
+                        data-grup="{{ ilac.grup or '' }}"
+                        data-etken="{{ (ilac.etken_madde or '')|lower }}"
+                        data-hastalik="{{ (ilac.hedef_hastalik or '')|lower }}"
+                        data-miktar="{{ ilac.miktar }}"
+                        data-taral="{{ h.get('taral') or 0 }}"
+                        data-son="{{ son.strftime('%Y-%m-%d') if son else '' }}"
+                        data-kritik="{{ '1' if kritik else '0' }}">
+                        <td>
+                            <strong>{{ ilac.ad }}</strong>
+                            {% if stok_kritik %}<i class="fas fa-triangle-exclamation text-danger ms-1" title="Kritik stok"></i>{% endif %}
+                            {% if kapasite_dusuk and not stok_kritik %}<i class="fas fa-triangle-exclamation text-warning ms-1" title="1 Taral'a yetmez"></i>{% endif %}
+                        </td>
                         <td>{% if ilac.grup %}<span class="badge bg-secondary">{{ ilac.grup }}</span>{% else %}-{% endif %}</td>
                         <td>{{ ilac.etken_madde or '-' }}</td>
                         <td>{{ ilac.hedef_hastalik or '-' }}</td>
-                        <td>{{ ilac.miktar }} {{ ilac.birim }}</td>
+                        <td class="{% if kritik %}text-danger fw-bold{% endif %}">{{ ilac.miktar }} {{ ilac.birim }}</td>
                         <td>{{ ilac.dozaj or '-' }}</td>
                         <td>{{ ilac.hasat_suresi or '-' }}</td>
-                        <td>{% if ilac.uyari %}<span class="badge bg-warning text-dark">{{ ilac.uyari }}</span>{% else %}-{% endif %}</td>
                         <td>
-                            {% set h = ilac_hesaplar.get(ilac.id, {}) %}
+                            {% if son %}
+                                <span class="son-uygulama" data-iso="{{ son.strftime('%Y-%m-%dT%H:%M:%S') }}" title="{{ son.strftime('%d.%m.%Y %H:%M') }}">{{ son.strftime('%d.%m.%Y') }}</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if h.get('uygulama_litre') is not none %}
                                 {% if h.get('dusuk') %}
                                     <span class="text-warning fw-semibold">
-                                        {{ h.uygulama_litre|int }} L
-                                        &nbsp;/&nbsp;
-                                        {{ h.taral }} Taral
+                                        {{ h.uygulama_litre|int }} L / {{ h.taral }} Taral
                                         <i class="fas fa-exclamation-triangle ms-1" title="1 Taral'dan az"></i>
                                     </span>
                                 {% else %}
-                                    <span class="text-success">
-                                        {{ h.uygulama_litre|int }} L
-                                        &nbsp;/&nbsp;
-                                        {{ h.taral }} Taral
-                                    </span>
+                                    <span class="text-success">{{ h.uygulama_litre|int }} L / {{ h.taral }} Taral</span>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted">—</span>
@@ -145,6 +288,9 @@
                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#duzenleModal{{ ilac.id }}">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <a href="{{ url_for('stok_hareket', urun_type='ilac', urun_id=ilac.id) }}" class="btn btn-sm btn-info text-white" title="Hareket Geçmişi">
+                                <i class="fas fa-history"></i>
+                            </a>
                             <form method="POST" action="{{ url_for('ilac_sil', id=ilac.id) }}" style="display:inline" onsubmit="return confirm('Bu ilacı silmek istediğinize emin misiniz?')">
                                 <button type="submit" class="btn btn-sm btn-danger">
                                     <i class="fas fa-trash"></i>
@@ -216,6 +362,36 @@
                                             <label class="form-label">Uyarı</label>
                                             <input type="text" class="form-control" name="uyari" value="{{ ilac.uyari or '' }}">
                                         </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Birim Fiyat (₺)</label>
+                                                <input type="number" step="0.01" class="form-control" name="birim_fiyat" value="{{ ilac.birim_fiyat or '' }}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Alım Tarihi</label>
+                                                <input type="date" class="form-control" name="alim_tarihi" value="{{ ilac.alim_tarihi.strftime('%Y-%m-%d') if ilac.alim_tarihi else '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">SKT</label>
+                                                <input type="date" class="form-control" name="son_kullanma_tarihi" value="{{ ilac.son_kullanma_tarihi.strftime('%Y-%m-%d') if ilac.son_kullanma_tarihi else '' }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Lot / Parti</label>
+                                                <input type="text" class="form-control" name="lot_no" value="{{ ilac.lot_no or '' }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Açılma Tarihi</label>
+                                                <input type="date" class="form-control" name="acilma_tarihi" value="{{ ilac.acilma_tarihi.strftime('%Y-%m-%d') if ilac.acilma_tarihi else '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Tekrar Aralığı (gün)</label>
+                                                <input type="number" min="0" class="form-control" name="tekrar_araligi_gun" value="{{ ilac.tekrar_araligi_gun or '' }}" placeholder="ör: 7">
+                                            </div>
+                                        </div>
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" name="kaydet_json" id="kaydet_json_{{ ilac.id }}" checked>
                                             <label class="form-check-label" for="kaydet_json_{{ ilac.id }}">JSON veritabanına da kaydet</label>
@@ -277,6 +453,11 @@
     font-weight: 700;
     padding: 0;
 }
+tr.table-danger-subtle { background-color: #fff5f5; }
+th.sortable:hover { background-color: rgba(13,110,253,0.08); }
+.grup-btn.active { font-weight: 600; }
+.kritik-chip { cursor: pointer; }
+.kritik-chip:hover { opacity: 0.85; }
 </style>
 {% endblock %}
 
@@ -418,6 +599,181 @@
     document.addEventListener('mousedown', function(e) {
         if (!adInput.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
     });
+})();
+
+// === FILTRE + SIRALAMA + EXPORT ===
+(function() {
+    var table = document.getElementById('ilacTable');
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.ilac-row'));
+    var araInput = document.getElementById('ilacAra');
+    var araTemizle = document.getElementById('ilacAraTemizle');
+    var hastalikSel = document.getElementById('hastalikFilter');
+    var kritikOnly = document.getElementById('kritikOnly');
+    var grupBar = document.getElementById('grupFiltreBar');
+    var kritikBtn = document.getElementById('filterKritikBtn');
+    var csvBtn = document.getElementById('csvExportBtn');
+    var ozetGosterilen = document.getElementById('ozet-gosterilen');
+
+    var state = { q: '', grup: '', hastalik: '', kritik: false, sortKey: null, sortDir: 1 };
+
+    function normalize(s) {
+        return (s || '').toString().toLowerCase()
+            .replace(/\u0307/g, '')
+            .replace(/ı/g, 'i').replace(/İ/g, 'i')
+            .replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+            .replace(/ö/g, 'o').replace(/ç/g, 'c');
+    }
+
+    function apply() {
+        var qn = normalize(state.q);
+        var hn = normalize(state.hastalik);
+        var shown = 0;
+        rows.forEach(function(r) {
+            var ad = r.dataset.ad, etken = r.dataset.etken, hastalik = r.dataset.hastalik;
+            var grup = r.dataset.grup, isKritik = r.dataset.kritik === '1';
+            var matchQ = !qn || normalize(ad).indexOf(qn) !== -1 || normalize(etken).indexOf(qn) !== -1 || normalize(hastalik).indexOf(qn) !== -1;
+            var matchG = !state.grup || grup === state.grup;
+            var matchH = !hn || normalize(hastalik).indexOf(hn) !== -1;
+            var matchK = !state.kritik || isKritik;
+            var visible = matchQ && matchG && matchH && matchK;
+            r.style.display = visible ? '' : 'none';
+            if (visible) shown++;
+        });
+        if (ozetGosterilen) ozetGosterilen.textContent = shown;
+    }
+
+    function sortRows(key, dir) {
+        var sorted = rows.slice().sort(function(a, b) {
+            var va = a.dataset[key] || '', vb = b.dataset[key] || '';
+            var na = parseFloat(va), nb = parseFloat(vb);
+            if (!isNaN(na) && !isNaN(nb) && va !== '' && vb !== '') return (na - nb) * dir;
+            return va.localeCompare(vb, 'tr') * dir;
+        });
+        sorted.forEach(function(r) { tbody.appendChild(r); });
+    }
+
+    // Arama
+    if (araInput) {
+        araInput.addEventListener('input', function() { state.q = this.value; apply(); });
+    }
+    if (araTemizle) {
+        araTemizle.addEventListener('click', function() { araInput.value = ''; state.q = ''; apply(); araInput.focus(); });
+    }
+
+    // Grup butonları
+    if (grupBar) {
+        grupBar.addEventListener('click', function(e) {
+            var btn = e.target.closest('.grup-btn');
+            if (!btn) return;
+            grupBar.querySelectorAll('.grup-btn').forEach(function(b) {
+                b.classList.remove('active', 'btn-primary');
+                b.classList.add('btn-outline-secondary');
+            });
+            btn.classList.add('active', 'btn-primary');
+            btn.classList.remove('btn-outline-secondary');
+            state.grup = btn.dataset.grup;
+            apply();
+        });
+    }
+
+    // Hastalık dropdown
+    if (hastalikSel) {
+        hastalikSel.addEventListener('change', function() { state.hastalik = this.value; apply(); });
+    }
+
+    // Kritik switch
+    if (kritikOnly) {
+        kritikOnly.addEventListener('change', function() { state.kritik = this.checked; apply(); });
+    }
+    if (kritikBtn) {
+        kritikBtn.addEventListener('click', function() {
+            kritikOnly.checked = true;
+            state.kritik = true;
+            apply();
+            document.getElementById('ilacTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    // Kritik chip tıklama → ilacı highlight et ve scroll et
+    document.querySelectorAll('.kritik-chip').forEach(function(chip) {
+        chip.addEventListener('click', function(e) {
+            e.preventDefault();
+            var id = this.dataset.ilacId;
+            var row = tbody.querySelector('tr[data-ilac-id="' + id + '"]');
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.style.transition = 'background-color 1s';
+                row.style.backgroundColor = '#fff3cd';
+                setTimeout(function() { row.style.backgroundColor = ''; }, 2000);
+            }
+        });
+    });
+
+    // Sıralama
+    table.querySelectorAll('th.sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var key = this.dataset.sort;
+            if (state.sortKey === key) state.sortDir = -state.sortDir;
+            else { state.sortKey = key; state.sortDir = 1; }
+            table.querySelectorAll('th.sortable i').forEach(function(i) {
+                i.className = 'fas fa-sort text-muted small';
+            });
+            this.querySelector('i').className = 'fas ' + (state.sortDir === 1 ? 'fa-sort-up' : 'fa-sort-down') + ' small';
+            sortRows(key, state.sortDir);
+        });
+    });
+
+    // Son uygulama gün farkı
+    document.querySelectorAll('.son-uygulama').forEach(function(el) {
+        var iso = el.dataset.iso;
+        if (!iso) return;
+        var d = new Date(iso);
+        var fark = Math.floor((Date.now() - d.getTime()) / 86400000);
+        var suffix = fark === 0 ? ' (bugün)' : fark === 1 ? ' (dün)' : ' (' + fark + ' gün önce)';
+        el.innerHTML += ' <small class="text-muted">' + suffix + '</small>';
+    });
+
+    // CSV Export (sadece görünen satırlar)
+    if (csvBtn) {
+        csvBtn.addEventListener('click', function() {
+            var headers = ['Ad', 'Grup', 'Etken Madde', 'Hedef Hastalık', 'Stok', 'Birim', 'Dozu', 'Hasat', 'Son Uygulama', 'Kapasite (Taral)', 'Min Stok', 'Kritik'];
+            var lines = [headers.join(';')];
+            rows.forEach(function(r) {
+                if (r.style.display === 'none') return;
+                var cells = r.querySelectorAll('td');
+                var ad = cells[0].innerText.trim();
+                var grup = r.dataset.grup;
+                var etken = cells[2].innerText.trim();
+                var hastalik = cells[3].innerText.trim();
+                var miktar = r.dataset.miktar;
+                var stokText = cells[4].innerText.trim();
+                var birim = stokText.split(' ').pop();
+                var dozaj = cells[5].innerText.trim();
+                var hasat = cells[6].innerText.trim();
+                var son = r.dataset.son;
+                var taral = r.dataset.taral;
+                var kritik = r.dataset.kritik === '1' ? 'EVET' : '';
+                var row = [ad, grup, etken, hastalik, miktar, birim, dozaj, hasat, son, taral, '', kritik];
+                lines.push(row.map(function(v) {
+                    v = (v == null ? '' : String(v));
+                    if (v.indexOf(';') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+                        return '"' + v.replace(/"/g, '""') + '"';
+                    }
+                    return v;
+                }).join(';'));
+            });
+            var csv = '\uFEFF' + lines.join('\n');
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            var ts = new Date().toISOString().slice(0, 10);
+            a.href = url; a.download = 'ilaclar-' + ts + '.csv';
+            document.body.appendChild(a); a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        });
+    }
 })();
 </script>
 {% endblock %}

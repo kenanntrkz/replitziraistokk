@@ -1,27 +1,140 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<div class="row mb-4">
+<div class="row mb-4 align-items-center">
     <div class="col">
         <h1>
             <i class="fas fa-seedling me-2"></i> Gübre Yönetimi
         </h1>
-        <p class="lead">Gübre ekle, düzenle ve stokları takip et.</p>
+        <p class="lead mb-0">Gübre ekle, düzenle ve stokları takip et.</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#katalogEkleModal">
+            <i class="fas fa-book-medical me-1"></i> Kataloğa Ekle
+        </button>
+    </div>
+</div>
+
+<!-- Kataloğa Ekle Modal -->
+<div class="modal fade" id="katalogEkleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-book-medical me-2"></i>Ürünü Kataloğa Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Stok girmeden sadece ürün bilgilerini kataloğa kaydedebilirsin.</p>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ürün Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="kat_ad" placeholder="Örn: NUTRI GROW PZn">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Kategori</label>
+                        <select class="form-select" id="kat_kategori">
+                            <option value="">-- Seçiniz --</option>
+                            <option value="Yaprak Gübresi">Yaprak Gübresi</option>
+                            <option value="Sıvı Damlama">Sıvı Damlama</option>
+                            <option value="Toz Damlama">Toz Damlama</option>
+                            <option value="Mikro Element">Mikro Element</option>
+                            <option value="Biyostimülant">Biyostimülant</option>
+                            <option value="Özel Seri">Özel Seri</option>
+                            <option value="Toprak Gübresi">Toprak Gübresi</option>
+                            <option value="Diğer">Diğer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Formülasyon (N-P-K)</label>
+                        <input type="text" class="form-control" id="kat_formulasyon" placeholder="Örn: 18-18-18 veya %30 P2O5">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Kullanım Alanı / Not</label>
+                        <input type="text" class="form-control" id="kat_kullanim" placeholder="Örn: Bağ, narenciye...">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label"><i class="fas fa-leaf text-success"></i> Yaprak Dozu</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control" id="kat_yaprak_dozu" placeholder="250">
+                            <span class="input-group-text">ml/100lt</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label"><i class="fas fa-tint text-primary"></i> Damlama Dozu</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control" id="kat_damlama_dozu" placeholder="3">
+                            <span class="input-group-text">lt/da</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="kat_aciklama" rows="2" placeholder="Ürün hakkında kısa not..."></textarea>
+                    </div>
+                </div>
+                <div id="katalogEkleMsg" class="d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="katalogEkleKaydet">
+                    <i class="fas fa-save me-1"></i> Kataloğa Kaydet
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Yeni Gübre Ekleme Formu -->
 <div class="card mb-4">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Gübre Ekle</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('gubreler') }}">
+
+        <!-- ADIM 1: Katalogdan Seç veya Manuel -->
+        <div class="mb-4">
+            <label class="form-label fw-bold"><i class="fas fa-search me-1"></i>Katalogdan Ara</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-seedling"></i></span>
+                <select class="form-select" id="katalogSec" style="max-width:500px;">
+                    <option value="">-- Katalogdan seç (otomatik doldurmak için) --</option>
+                </select>
+                <button type="button" class="btn btn-outline-secondary" id="katalogTemizle">
+                    <i class="fas fa-times"></i> Temizle
+                </button>
+            </div>
+            <small class="text-muted">Katalogda yoksa formu manuel doldur — otomatik kaydedilir.</small>
+            <div id="katalogBilgi" class="alert alert-success mt-2 py-2 d-none" style="font-size:0.85rem;"></div>
+        </div>
+
+        <hr>
+
+        <form method="POST" action="{{ url_for('gubreler') }}" id="gubreForm">
+            <input type="hidden" name="katalog_id" id="katalog_id_hidden">
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="ad" class="form-label">Gübre Adı</label>
-                    <input type="text" class="form-control" id="ad" name="ad" required>
+                    <label for="ad" class="form-label">Gübre Adı <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="ad" name="ad" required placeholder="Ürün adını gir veya katalogdan seç">
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label for="kategori" class="form-label">Kategori</label>
+                    <select class="form-select" id="kategori" name="kategori">
+                        <option value="">-- Seçiniz --</option>
+                        <option value="Yaprak Gübresi">Yaprak Gübresi</option>
+                        <option value="Sıvı Damlama">Sıvı Damlama</option>
+                        <option value="Toz Damlama">Toz Damlama</option>
+                        <option value="Mikro Element">Mikro Element</option>
+                        <option value="Biyostimülant">Biyostimülant</option>
+                        <option value="Özel Seri">Özel Seri</option>
+                        <option value="Toprak Gübresi">Toprak Gübresi</option>
+                        <option value="Diğer">Diğer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="formulasyon" class="form-label">Formülasyon (N-P-K)</label>
                     <input type="text" class="form-control" id="formulasyon" name="formulasyon" placeholder="Örn: 18-18-18">
@@ -30,34 +143,69 @@
                     </button>
                     <div id="gubreAciklama" class="mt-2" style="display:none;"></div>
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label for="kullanim_alani" class="form-label">Kullanım Alanı / Notlar</label>
+                    <textarea class="form-control" id="kullanim_alani" name="kullanim_alani" rows="2" placeholder="Hangi bitkiler, nasıl kullanılır..."></textarea>
+                </div>
             </div>
             <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="miktar" class="form-label">Stok Miktarı</label>
-                    <input type="number" step="0.01" class="form-control" id="miktar" name="miktar" required>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold text-success"><i class="fas fa-warehouse me-1"></i>Stok Miktarı <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" class="form-control border-success" id="miktar" name="miktar" required placeholder="Elimde ne kadar var">
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="birim" class="form-label">Birim</label>
-                    <select class="form-select" id="birim" name="birim" required>
+                <div class="col-md-3 mb-3">
+                    <label for="birim" class="form-label fw-bold text-success">Birim <span class="text-danger">*</span></label>
+                    <select class="form-select border-success" id="birim" name="birim" required>
                         <option value="kg">kg</option>
                         <option value="lt">lt</option>
                         <option value="gr">gr</option>
                         <option value="ton">ton</option>
+                        <option value="ml">ml</option>
                     </select>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="uygulama_dozu" class="form-label">Uygulama Dozu (5 dönüm için)</label>
-                    <input type="number" step="0.01" class="form-control" id="uygulama_dozu" name="uygulama_dozu">
+                <div class="col-md-3 mb-3">
+                    <label for="uygulama_dozu" class="form-label">
+                        <i class="fas fa-tint text-primary"></i> Damlama Dozu <small class="text-muted">(lt/da)</small>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" step="0.01" class="form-control" id="uygulama_dozu" name="uygulama_dozu" placeholder="Örn: 3">
+                        <span class="input-group-text">lt/da</span>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="yaprak_dozu" class="form-label">
+                        <i class="fas fa-leaf text-success"></i> Yaprak Dozu <small class="text-muted">(ml/100lt)</small>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" step="0.01" class="form-control" id="yaprak_dozu" name="yaprak_dozu" placeholder="Örn: 250">
+                        <span class="input-group-text">ml/100lt</span>
+                    </div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="kullanim_alani" class="form-label">Kullanım Alanı</label>
-                    <input type="text" class="form-control" id="kullanim_alani" name="kullanim_alani">
-                </div>
-                <div class="col-md-6 mb-3">
                     <label for="not_bilgisi" class="form-label">Not</label>
                     <textarea class="form-control" id="not_bilgisi" name="not_bilgisi" rows="2"></textarea>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gubre_birim_fiyat" class="form-label">Birim Fiyat (₺)</label>
+                    <input type="number" step="0.01" class="form-control" id="gubre_birim_fiyat" name="birim_fiyat">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gubre_alim_tarihi" class="form-label">Alım Tarihi</label>
+                    <input type="date" class="form-control" id="gubre_alim_tarihi" name="alim_tarihi">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gubre_skt" class="form-label">SKT</label>
+                    <input type="date" class="form-control" id="gubre_skt" name="son_kullanma_tarihi">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gubre_lot" class="form-label">Lot / Parti</label>
+                    <input type="text" class="form-control" id="gubre_lot" name="lot_no">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gubre_acilma" class="form-label">Açılma Tarihi</label>
+                    <input type="date" class="form-control" id="gubre_acilma" name="acilma_tarihi">
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">
@@ -67,39 +215,157 @@
     </div>
 </div>
 
+{# Özet metrikleri ve kritik gübre listesi #}
+{% set toplam = gubreler|length %}
+{% set kritikler = [] %}
+{% for g in gubreler %}{% if g.min_stok and g.miktar < g.min_stok %}{% set _ = kritikler.append(g) %}{% endif %}{% endfor %}
+{% set kategoriler = gubreler|map(attribute='kategori')|reject('none')|reject('equalto','')|unique|list|sort %}
+
+<!-- Özet Kartları -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-primary-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Toplam</div>
+                <div class="fs-3 fw-bold text-primary"><span id="gozet-toplam">{{ toplam }}</span> <small class="text-muted fs-6">gübre</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-danger-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Kritik Stok</div>
+                <div class="fs-3 fw-bold text-danger"><span id="gozet-kritik">{{ kritikler|length }}</span> <small class="text-muted fs-6">gübre</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-success-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Kategori Sayısı</div>
+                <div class="fs-3 fw-bold text-success">{{ kategoriler|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100 border-info-subtle">
+            <div class="card-body py-3">
+                <div class="text-muted small">Gösterilen</div>
+                <div class="fs-3 fw-bold text-info"><span id="gozet-gosterilen">{{ toplam }}</span> <small class="text-muted fs-6">satır</small></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if kritikler %}
+<!-- Kritik Stok Uyarı Bandı -->
+<div class="alert alert-danger d-flex align-items-center flex-wrap mb-3" role="alert">
+    <i class="fas fa-triangle-exclamation fs-4 me-2"></i>
+    <strong class="me-2">{{ kritikler|length }} gübre kritik seviyede:</strong>
+    <span class="flex-grow-1">
+        {% for k in kritikler %}
+            <a href="#" class="badge bg-danger text-decoration-none me-1 gubre-kritik-chip" data-gubre-id="{{ k.id }}">{{ k.ad }} ({{ k.miktar }} {{ k.birim }})</a>
+        {% endfor %}
+    </span>
+    <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="gfilterKritikBtn">
+        <i class="fas fa-filter me-1"></i>Sadece kritikleri göster
+    </button>
+</div>
+{% endif %}
+
+<!-- Filtre ve Arama Çubuğu -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="gubreAra" placeholder="Ad / formülasyon / kullanım alanında ara...">
+                    <button type="button" class="btn btn-outline-secondary" id="gubreAraTemizle" title="Temizle"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check form-switch pt-2">
+                    <input class="form-check-input" type="checkbox" id="gubreKritikOnly">
+                    <label class="form-check-label" for="gubreKritikOnly">Sadece kritik stok</label>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button type="button" class="btn btn-outline-success btn-sm" id="gubreCsvExportBtn">
+                    <i class="fas fa-file-excel me-1"></i>CSV Aktar
+                </button>
+            </div>
+        </div>
+        <div class="mt-2 d-flex flex-wrap gap-1" id="kategoriFiltreBar">
+            <button type="button" class="btn btn-sm btn-primary kategori-btn active" data-kategori="">Tümü <span class="badge bg-light text-dark ms-1">{{ toplam }}</span></button>
+            {% for k in kategoriler %}
+            <button type="button" class="btn btn-sm btn-outline-secondary kategori-btn" data-kategori="{{ k }}">{{ k }} <span class="badge bg-secondary ms-1">{{ gubreler|selectattr('kategori','equalto',k)|list|length }}</span></button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- Gübre Listesi -->
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut Gübreler ({{ gubreler|length }})</h5>
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mevcut Gübreler</h5>
     </div>
     <div class="card-body">
         {% if gubreler %}
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover" id="gubreTable">
                 <thead>
                     <tr>
-                        <th>Gübre Adı</th>
+                        <th class="sortable" data-sort="ad" style="cursor:pointer">Gübre Adı <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort="kategori" style="cursor:pointer">Kategori <i class="fas fa-sort text-muted small"></i></th>
                         <th>Formülasyon</th>
-                        <th>Stok</th>
+                        <th class="sortable" data-sort="miktar" style="cursor:pointer">Stok <i class="fas fa-sort text-muted small"></i></th>
                         <th>Kullanım Alanı</th>
-                        <th>Uygulama Dozu</th>
+                        <th>Damlama</th>
+                        <th>Yaprak</th>
+                        <th class="sortable" data-sort="son" style="cursor:pointer">Son Uygulama <i class="fas fa-sort text-muted small"></i></th>
                         <th>Not</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for gubre in gubreler %}
-                    <tr>
-                        <td><strong>{{ gubre.ad }}</strong></td>
+                    {% set son = gubre_son_uygulama.get(gubre.id) %}
+                    {% set kritik = (gubre.min_stok and gubre.miktar < gubre.min_stok) %}
+                    <tr class="gubre-row {% if kritik %}table-danger-subtle{% endif %}"
+                        data-gubre-id="{{ gubre.id }}"
+                        data-ad="{{ gubre.ad|lower }}"
+                        data-kategori="{{ gubre.kategori or '' }}"
+                        data-formul="{{ (gubre.formulasyon or '')|lower }}"
+                        data-kullanim="{{ (gubre.kullanim_alani or '')|lower }}"
+                        data-miktar="{{ gubre.miktar }}"
+                        data-son="{{ son.strftime('%Y-%m-%d') if son else '' }}"
+                        data-kritik="{{ '1' if kritik else '0' }}">
+                        <td>
+                            <strong>{{ gubre.ad }}</strong>
+                            {% if kritik %}<i class="fas fa-triangle-exclamation text-danger ms-1" title="Kritik stok"></i>{% endif %}
+                        </td>
+                        <td>{% if gubre.kategori %}<span class="badge bg-success">{{ gubre.kategori }}</span>{% else %}-{% endif %}</td>
                         <td>{{ gubre.formulasyon or '-' }}</td>
-                        <td>{{ gubre.miktar }} {{ gubre.birim }}</td>
+                        <td class="{% if kritik %}text-danger fw-bold{% endif %}">{{ gubre.miktar }} {{ gubre.birim }}</td>
                         <td>{{ gubre.kullanim_alani or '-' }}</td>
-                        <td>{% if gubre.uygulama_dozu %}{{ gubre.uygulama_dozu }} {{ gubre.birim }}{% else %}-{% endif %}</td>
+                        <td>{% if gubre.uygulama_dozu %}{{ gubre.uygulama_dozu }} lt/da{% else %}-{% endif %}</td>
+                        <td>{% if gubre.yaprak_dozu %}{{ gubre.yaprak_dozu }} ml/100lt{% else %}-{% endif %}</td>
+                        <td>
+                            {% if son %}
+                                <span class="gsonu" data-iso="{{ son.strftime('%Y-%m-%dT%H:%M:%S') }}" title="{{ son.strftime('%d.%m.%Y %H:%M') }}">{{ son.strftime('%d.%m.%Y') }}</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td>{{ gubre.not_bilgisi or '-' }}</td>
                         <td>
                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#gubreDuzenleModal{{ gubre.id }}">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <a href="{{ url_for('stok_hareket', urun_type='gubre', urun_id=gubre.id) }}" class="btn btn-sm btn-info text-white" title="Hareket Geçmişi">
+                                <i class="fas fa-history"></i>
+                            </a>
                             <form method="POST" action="{{ url_for('gubre_sil', id=gubre.id) }}" style="display:inline" onsubmit="return confirm('Bu gübreyi silmek istediğinize emin misiniz?')">
                                 <button type="submit" class="btn btn-sm btn-danger">
                                     <i class="fas fa-trash"></i>
@@ -127,6 +393,20 @@
                                             <input type="text" class="form-control" name="formulasyon" value="{{ gubre.formulasyon or '' }}">
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Kategori</label>
+                                            <select class="form-select" name="kategori">
+                                                <option value="">-- Seçiniz --</option>
+                                                <option value="Yaprak Gübresi" {% if gubre.kategori == "Yaprak Gübresi" %}selected{% endif %}>Yaprak Gübresi</option>
+                                                <option value="Sıvı Damlama" {% if gubre.kategori == "Sıvı Damlama" %}selected{% endif %}>Sıvı Damlama</option>
+                                                <option value="Toz Damlama" {% if gubre.kategori == "Toz Damlama" %}selected{% endif %}>Toz Damlama</option>
+                                                <option value="Mikro Element" {% if gubre.kategori == "Mikro Element" %}selected{% endif %}>Mikro Element</option>
+                                                <option value="Biyostimülant" {% if gubre.kategori == "Biyostimülant" %}selected{% endif %}>Biyostimülant</option>
+                                                <option value="Özel Seri" {% if gubre.kategori == "Özel Seri" %}selected{% endif %}>Özel Seri</option>
+                                                <option value="Toprak Gübresi" {% if gubre.kategori == "Toprak Gübresi" %}selected{% endif %}>Toprak Gübresi</option>
+                                                <option value="Diğer" {% if gubre.kategori == "Diğer" %}selected{% endif %}>Diğer</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
                                             <label class="form-label">Stok Miktarı</label>
                                             <input type="number" step="0.01" class="form-control" name="miktar" value="{{ gubre.miktar }}" required>
                                         </div>
@@ -144,12 +424,46 @@
                                             <input type="text" class="form-control" name="kullanim_alani" value="{{ gubre.kullanim_alani or '' }}">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Uygulama Dozu (5 dönüm için)</label>
-                                            <input type="number" step="0.01" class="form-control" name="uygulama_dozu" value="{{ gubre.uygulama_dozu or '' }}">
+                                            <label class="form-label"><i class="fas fa-tint text-primary"></i> Damlama Dozu <small class="text-muted">(lt/da)</small></label>
+                                            <div class="input-group">
+                                                <input type="number" step="0.01" class="form-control" name="uygulama_dozu" value="{{ gubre.uygulama_dozu or '' }}" placeholder="Örn: 3">
+                                                <span class="input-group-text">lt/da</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-leaf text-success"></i> Yaprak Dozu <small class="text-muted">(ml/100lt su)</small></label>
+                                            <div class="input-group">
+                                                <input type="number" step="0.01" class="form-control" name="yaprak_dozu" value="{{ gubre.yaprak_dozu or '' }}" placeholder="Örn: 250">
+                                                <span class="input-group-text">ml/100lt</span>
+                                            </div>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Not</label>
                                             <textarea class="form-control" name="not_bilgisi" rows="2">{{ gubre.not_bilgisi or '' }}</textarea>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Birim Fiyat (₺)</label>
+                                                <input type="number" step="0.01" class="form-control" name="birim_fiyat" value="{{ gubre.birim_fiyat or '' }}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Alım Tarihi</label>
+                                                <input type="date" class="form-control" name="alim_tarihi" value="{{ gubre.alim_tarihi.strftime('%Y-%m-%d') if gubre.alim_tarihi else '' }}">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">SKT</label>
+                                                <input type="date" class="form-control" name="son_kullanma_tarihi" value="{{ gubre.son_kullanma_tarihi.strftime('%Y-%m-%d') if gubre.son_kullanma_tarihi else '' }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Lot / Parti</label>
+                                                <input type="text" class="form-control" name="lot_no" value="{{ gubre.lot_no or '' }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Açılma Tarihi</label>
+                                                <input type="date" class="form-control" name="acilma_tarihi" value="{{ gubre.acilma_tarihi.strftime('%Y-%m-%d') if gubre.acilma_tarihi else '' }}">
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -171,4 +485,355 @@
         {% endif %}
     </div>
 </div>
+
+{% block scripts %}
+<script>
+
+// === KATALOĞA EKLE MODAL ===
+document.getElementById('katalogEkleKaydet').addEventListener('click', function() {
+    const ad = document.getElementById('kat_ad').value.trim();
+    if (!ad) {
+        const msg = document.getElementById('katalogEkleMsg');
+        msg.className = 'alert alert-danger';
+        msg.textContent = 'Ürün adı zorunlu!';
+        msg.classList.remove('d-none');
+        return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
+    fetch('/api/gubre-katalog/ekle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            ad: ad,
+            kategori: document.getElementById('kat_kategori').value,
+            formulasyon: document.getElementById('kat_formulasyon').value,
+            kullanim_alani: document.getElementById('kat_kullanim').value,
+            yaprak_dozu: parseFloat(document.getElementById('kat_yaprak_dozu').value) || null,
+            uygulama_dozu: parseFloat(document.getElementById('kat_damlama_dozu').value) || null,
+            aciklama: document.getElementById('kat_aciklama').value,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const msg = document.getElementById('katalogEkleMsg');
+        if (data.success) {
+            msg.className = 'alert alert-success';
+            msg.innerHTML = '<i class="fas fa-check-circle me-1"></i> <strong>' + ad + '</strong> kataloğa eklendi! Artık stoğa eklerken listeden seçebilirsin.';
+            msg.classList.remove('d-none');
+            btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydedildi';
+            // Dropdown listesini güncelle
+            fetch('/api/gubre-katalog')
+                .then(r => r.json())
+                .then(liste => {
+                    const sel = document.getElementById('katalogSec');
+                    sel.innerHTML = '<option value="">-- Katalogdan seç (otomatik doldurmak için) --</option>';
+                    const gruplar = {};
+                    liste.forEach(u => {
+                        const k = u.kategori || 'Diğer';
+                        if (!gruplar[k]) gruplar[k] = [];
+                        gruplar[k].push(u);
+                    });
+                    Object.keys(gruplar).sort().forEach(kat => {
+                        const grp = document.createElement('optgroup');
+                        grp.label = kat;
+                        gruplar[kat].forEach(u => {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = u.ad;
+                            grp.appendChild(opt);
+                        });
+                        sel.appendChild(grp);
+                    });
+                });
+            // Formu temizle
+            setTimeout(() => {
+                ['kat_ad','kat_formulasyon','kat_kullanim','kat_yaprak_dozu','kat_damlama_dozu','kat_aciklama'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                document.getElementById('kat_kategori').selectedIndex = 0;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-1"></i> Kataloğa Kaydet';
+            }, 2000);
+        } else {
+            msg.className = 'alert alert-danger';
+            msg.textContent = 'Hata: ' + (data.error || 'Bilinmeyen hata');
+            msg.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i> Kataloğa Kaydet';
+        }
+    });
+});
+
+// === GROWWAY KATALOG OTOMATIK DOLDURMA ===
+let katalogData = [];
+
+// Sayfa yüklenince katalog listesini çek
+fetch('/api/gubre-katalog')
+    .then(r => r.json())
+    .then(data => {
+        katalogData = data;
+        const sel = document.getElementById('katalogSec');
+        // Kategorilere göre grupla
+        const gruplar = {};
+        data.forEach(u => {
+            const k = u.kategori || 'Diğer';
+            if (!gruplar[k]) gruplar[k] = [];
+            gruplar[k].push(u);
+        });
+        Object.keys(gruplar).sort().forEach(kat => {
+            const grp = document.createElement('optgroup');
+            grp.label = kat;
+            gruplar[kat].forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.ad;
+                grp.appendChild(opt);
+            });
+            sel.appendChild(grp);
+        });
+    });
+
+// Katalogdan seçilince formu otomatik doldur
+document.getElementById('katalogSec').addEventListener('change', function() {
+    const id = this.value;
+    if (!id) return;
+    fetch('/api/gubre-katalog/' + id)
+        .then(r => r.json())
+        .then(u => {
+            document.getElementById('ad').value = u.ad || '';
+            document.getElementById('formulasyon').value = u.formulasyon || '';
+            document.getElementById('kullanim_alani').value = u.kullanim_alani || '';
+            document.getElementById('katalog_id_hidden').value = u.id;
+
+            // Kategori seç
+            const katSel = document.getElementById('kategori');
+            for (let i = 0; i < katSel.options.length; i++) {
+                if (katSel.options[i].value === u.kategori) {
+                    katSel.selectedIndex = i; break;
+                }
+            }
+
+            // Doz bilgisi
+            if (u.yaprak_dozu_min) {
+                const doz = u.yaprak_dozu_min == u.yaprak_dozu_max
+                    ? u.yaprak_dozu_min
+                    : ((u.yaprak_dozu_min + u.yaprak_dozu_max) / 2).toFixed(0);
+                document.getElementById('yaprak_dozu').value = doz;
+            }
+            if (u.damlama_dozu_min) {
+                const doz = u.damlama_dozu_min == u.damlama_dozu_max
+                    ? u.damlama_dozu_min
+                    : ((u.damlama_dozu_min + u.damlama_dozu_max) / 2).toFixed(1);
+                document.getElementById('uygulama_dozu').value = doz;
+            }
+
+            // Bilgi banner
+            const bilgi = document.getElementById('katalogBilgi');
+            bilgi.classList.remove('d-none');
+            const kaynak = u.kaynak === 'growway'
+                ? '<i class="fas fa-check-circle text-success"></i> Growway kataloğundan otomatik dolduruldu'
+                : '<i class="fas fa-user text-info"></i> Manuel kayıttan dolduruldu';
+            bilgi.innerHTML = kaynak + ' — <strong>' + u.ad + '</strong>. Sadece stok miktarını gir.';
+
+            // Stok alanına odaklan
+            document.getElementById('miktar').focus();
+        });
+});
+
+// Temizle butonu
+document.getElementById('katalogTemizle').addEventListener('click', function() {
+    document.getElementById('katalogSec').value = '';
+    document.getElementById('ad').value = '';
+    document.getElementById('formulasyon').value = '';
+    document.getElementById('kullanim_alani').value = '';
+    document.getElementById('kategori').selectedIndex = 0;
+    document.getElementById('yaprak_dozu').value = '';
+    document.getElementById('uygulama_dozu').value = '';
+    document.getElementById('katalog_id_hidden').value = '';
+    document.getElementById('not_bilgisi').value = '';
+    document.getElementById('katalogBilgi').classList.add('d-none');
+});
+
+// Form submit: katalogda yoksa otomatik kaydet
+document.getElementById('gubreForm').addEventListener('submit', function(e) {
+    const katalogId = document.getElementById('katalog_id_hidden').value;
+    const ad = document.getElementById('ad').value.trim();
+    // Katalogda yoksa ve ad varsa → kataloğa kaydet
+    if (!katalogId && ad) {
+        const payload = {
+            ad: ad,
+            kategori: document.getElementById('kategori').value,
+            formulasyon: document.getElementById('formulasyon').value,
+            yaprak_dozu: parseFloat(document.getElementById('yaprak_dozu').value) || null,
+            uygulama_dozu: parseFloat(document.getElementById('uygulama_dozu').value) || null,
+            kullanim_alani: document.getElementById('kullanim_alani').value,
+        };
+        // Fire-and-forget (form submit devam etsin)
+        fetch('/api/gubre-katalog/ekle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+    }
+});
+
+// === FILTRE + SIRALAMA + EXPORT (Gübre) ===
+(function() {
+    var table = document.getElementById('gubreTable');
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.gubre-row'));
+    var araInput = document.getElementById('gubreAra');
+    var araTemizle = document.getElementById('gubreAraTemizle');
+    var kritikOnly = document.getElementById('gubreKritikOnly');
+    var katBar = document.getElementById('kategoriFiltreBar');
+    var kritikBtn = document.getElementById('gfilterKritikBtn');
+    var csvBtn = document.getElementById('gubreCsvExportBtn');
+    var ozetGosterilen = document.getElementById('gozet-gosterilen');
+    var state = { q: '', kategori: '', kritik: false, sortKey: null, sortDir: 1 };
+
+    function normalize(s) {
+        return (s || '').toString().toLowerCase()
+            .replace(/\u0307/g, '')
+            .replace(/ı/g, 'i').replace(/İ/g, 'i')
+            .replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+            .replace(/ö/g, 'o').replace(/ç/g, 'c');
+    }
+
+    function apply() {
+        var qn = normalize(state.q);
+        var shown = 0;
+        rows.forEach(function(r) {
+            var matchQ = !qn || normalize(r.dataset.ad).indexOf(qn) !== -1 ||
+                         normalize(r.dataset.formul).indexOf(qn) !== -1 ||
+                         normalize(r.dataset.kullanim).indexOf(qn) !== -1;
+            var matchK = !state.kategori || r.dataset.kategori === state.kategori;
+            var matchKr = !state.kritik || r.dataset.kritik === '1';
+            var visible = matchQ && matchK && matchKr;
+            r.style.display = visible ? '' : 'none';
+            if (visible) shown++;
+        });
+        if (ozetGosterilen) ozetGosterilen.textContent = shown;
+    }
+
+    function sortRows(key, dir) {
+        var sorted = rows.slice().sort(function(a, b) {
+            var va = a.dataset[key] || '', vb = b.dataset[key] || '';
+            var na = parseFloat(va), nb = parseFloat(vb);
+            if (!isNaN(na) && !isNaN(nb) && va !== '' && vb !== '') return (na - nb) * dir;
+            return va.localeCompare(vb, 'tr') * dir;
+        });
+        sorted.forEach(function(r) { tbody.appendChild(r); });
+    }
+
+    if (araInput) araInput.addEventListener('input', function() { state.q = this.value; apply(); });
+    if (araTemizle) araTemizle.addEventListener('click', function() { araInput.value = ''; state.q = ''; apply(); araInput.focus(); });
+
+    if (katBar) {
+        katBar.addEventListener('click', function(e) {
+            var btn = e.target.closest('.kategori-btn');
+            if (!btn) return;
+            katBar.querySelectorAll('.kategori-btn').forEach(function(b) {
+                b.classList.remove('active', 'btn-primary');
+                b.classList.add('btn-outline-secondary');
+            });
+            btn.classList.add('active', 'btn-primary');
+            btn.classList.remove('btn-outline-secondary');
+            state.kategori = btn.dataset.kategori;
+            apply();
+        });
+    }
+
+    if (kritikOnly) kritikOnly.addEventListener('change', function() { state.kritik = this.checked; apply(); });
+    if (kritikBtn) kritikBtn.addEventListener('click', function() {
+        kritikOnly.checked = true; state.kritik = true; apply();
+        table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.querySelectorAll('.gubre-kritik-chip').forEach(function(chip) {
+        chip.addEventListener('click', function(e) {
+            e.preventDefault();
+            var id = this.dataset.gubreId;
+            var row = tbody.querySelector('tr[data-gubre-id="' + id + '"]');
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.style.transition = 'background-color 1s';
+                row.style.backgroundColor = '#fff3cd';
+                setTimeout(function() { row.style.backgroundColor = ''; }, 2000);
+            }
+        });
+    });
+
+    table.querySelectorAll('th.sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var key = this.dataset.sort;
+            if (state.sortKey === key) state.sortDir = -state.sortDir;
+            else { state.sortKey = key; state.sortDir = 1; }
+            table.querySelectorAll('th.sortable i').forEach(function(i) {
+                i.className = 'fas fa-sort text-muted small';
+            });
+            this.querySelector('i').className = 'fas ' + (state.sortDir === 1 ? 'fa-sort-up' : 'fa-sort-down') + ' small';
+            sortRows(key, state.sortDir);
+        });
+    });
+
+    document.querySelectorAll('.gsonu').forEach(function(el) {
+        var iso = el.dataset.iso;
+        if (!iso) return;
+        var d = new Date(iso);
+        var fark = Math.floor((Date.now() - d.getTime()) / 86400000);
+        var suffix = fark === 0 ? ' (bugün)' : fark === 1 ? ' (dün)' : ' (' + fark + ' gün önce)';
+        el.innerHTML += ' <small class="text-muted">' + suffix + '</small>';
+    });
+
+    if (csvBtn) {
+        csvBtn.addEventListener('click', function() {
+            var headers = ['Ad', 'Kategori', 'Formülasyon', 'Stok', 'Birim', 'Kullanım Alanı', 'Damlama (lt/da)', 'Yaprak (ml/100lt)', 'Son Uygulama', 'Kritik'];
+            var lines = [headers.join(';')];
+            rows.forEach(function(r) {
+                if (r.style.display === 'none') return;
+                var cells = r.querySelectorAll('td');
+                var ad = cells[0].innerText.trim();
+                var kategori = r.dataset.kategori;
+                var formul = cells[2].innerText.trim();
+                var stokText = cells[3].innerText.trim();
+                var birim = stokText.split(' ').pop();
+                var kullanim = cells[4].innerText.trim();
+                var damlama = cells[5].innerText.trim();
+                var yaprak = cells[6].innerText.trim();
+                var son = r.dataset.son;
+                var kritik = r.dataset.kritik === '1' ? 'EVET' : '';
+                var row = [ad, kategori, formul, r.dataset.miktar, birim, kullanim, damlama, yaprak, son, kritik];
+                lines.push(row.map(function(v) {
+                    v = (v == null ? '' : String(v));
+                    if (v.indexOf(';') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+                        return '"' + v.replace(/"/g, '""') + '"';
+                    }
+                    return v;
+                }).join(';'));
+            });
+            var csv = '\uFEFF' + lines.join('\n');
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'gubreler-' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a); a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        });
+    }
+})();
+</script>
+
+<style>
+tr.table-danger-subtle { background-color: #fff5f5; }
+#gubreTable th.sortable:hover { background-color: rgba(13,110,253,0.08); }
+.kategori-btn.active { font-weight: 600; }
+.gubre-kritik-chip { cursor: pointer; }
+.gubre-kritik-chip:hover { opacity: 0.85; }
+</style>
+{% endblock %}
+
 {% endblock %}

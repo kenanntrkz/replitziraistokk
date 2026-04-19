@@ -10,22 +10,321 @@
     </div>
 </div>
 
-{% if ilac_uyarilar %}
-<div class="uyari-kutusu mb-4">
-    <h5 class="text-danger">
-        <i class="fas fa-exclamation-triangle"></i> Stok Uyarıları
-    </h5>
+<!-- Özet Kartları -->
+<div class="row mb-4 g-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-globe"></i> Toplam Bağ</h5>
+                <h2>{{ toplam_bag }}</h2>
+                <small>aktif bağ</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-pills"></i> İlaç Çeşidi</h5>
+                <h2>{{ toplam_ilac }}</h2>
+                <small>adedi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-seedling"></i> Gübre Çeşidi</h5>
+                <h2>{{ toplam_gubre }}</h2>
+                <small>adedi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-exclamation-triangle"></i> Kritik Stok</h5>
+                <h2>{{ ilac_uyarilar|length + gubre_uyarilar|length }}</h2>
+                <small>ürün</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Hava Durumu Widget #}
+{% if hava and hava.gunler %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-cloud-sun me-2"></i>
+            Hava Durumu
+            {% if hava_bag %}<small class="text-muted">— {{ hava_bag.ad }}</small>{% endif %}
+        </h5>
+        <small class="text-muted">Kaynak: Open-Meteo</small>
+    </div>
+    <div class="card-body">
+        {% if hava.anlik %}
+        <div class="row align-items-center mb-3 pb-3 border-bottom">
+            <div class="col-md-4 text-center">
+                <i class="fas {{ hava.anlik.ikon }} {{ hava.anlik.renk }} fa-3x"></i>
+                <div class="fs-2 fw-bold">{{ hava.anlik.sicaklik|round(0) }}°C</div>
+                <div class="small text-muted">{{ hava.anlik.kod_metin }}</div>
+            </div>
+            <div class="col-md-8">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <i class="fas fa-tint text-info"></i>
+                        <div class="small text-muted">Nem</div>
+                        <strong>%{{ hava.anlik.nem|round(0) }}</strong>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-wind text-secondary"></i>
+                        <div class="small text-muted">Rüzgar</div>
+                        <strong>{{ hava.anlik.ruzgar_kmh|round(0) }} km/h</strong>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-cloud-rain text-primary"></i>
+                        <div class="small text-muted">Yağış</div>
+                        <strong>{{ hava.anlik.yagis|round(1) if hava.anlik.yagis is not none else 0 }} mm</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="row g-2">
+            {% for g in hava.gunler %}
+            <div class="col">
+                <div class="card h-100 text-center border-{{ g.ilaclama.renk }}">
+                    <div class="card-body p-2">
+                        <div class="small text-muted">{{ g.tarih[5:10] }}</div>
+                        <i class="fas {{ g.ikon }} {{ g.renk }} fa-2x my-1"></i>
+                        <div class="small"><strong>{{ g.tmax|round(0) }}°</strong> / {{ g.tmin|round(0) }}°</div>
+                        <div class="small text-primary"><i class="fas fa-tint"></i> %{{ g.yagis_ihtimal|round(0) if g.yagis_ihtimal is not none else 0 }}</div>
+                        <div class="small text-secondary"><i class="fas fa-wind"></i> {{ g.ruzgar_kmh|round(0) }}</div>
+                        <span class="badge bg-{{ g.ilaclama.renk }} mt-1" title="{{ g.ilaclama.sebep }}">{{ g.ilaclama.metin }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- HÖS (Hasat Öncesi Süre) Uyarıları -->
+{% if hos_aktif %}
+<div class="alert alert-warning mb-4" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-triangle-exclamation"></i> Aktif Hasat Öncesi Süre (HÖS)
+    </h4>
+    <p class="mb-2">Aşağıdaki bağlar <strong>güvenli hasat tarihine kadar</strong> bağbozumuna kapalıdır. Yasal kalıntı sınırını aşmamak için bekleyin:</p>
     <ul class="mb-0">
-        {% for ilac in ilac_uyarilar %}
+        {% for h in hos_aktif %}
         <li>
-            <strong>{{ ilac.ad }}</strong> ilacı stok seviyesi düşük! (Kalan: {{ ilac.miktar }} {{ ilac.birim }}, 
-            1200 litre eşdeğerinin altında)
+            <a href="{{ url_for('bag_detay', id=h.bag.id) }}" class="text-decoration-none fw-bold">{{ h.bag.ad }}</a>
+            — güvenli hasat: <strong>{{ h.guvenli_tarih.strftime('%d.%m.%Y') }}</strong>
+            <span class="badge bg-danger ms-2">{{ h.kalan_gun }} gün kaldı</span>
         </li>
         {% endfor %}
     </ul>
 </div>
 {% endif %}
 
+{% if hos_serbest %}
+<div class="alert alert-success mb-4" role="alert">
+    <h5 class="alert-heading mb-2"><i class="fas fa-check-circle"></i> Hasat Serbest Bağlar</h5>
+    <p class="small mb-2">HÖS süresi geçmiş — hasat yapılabilir:</p>
+    <ul class="mb-0 small">
+        {% for h in hos_serbest %}
+        <li>
+            <a href="{{ url_for('bag_detay', id=h.bag.id) }}" class="text-decoration-none">{{ h.bag.ad }}</a>
+            — son HÖS: {{ h.guvenli_tarih.strftime('%d.%m.%Y') }}
+            ({{ -h.kalan_gun }} gün önce serbest)
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{# --- SKT uyarıları --- #}
+{% if skt_dolmus %}
+<div class="alert alert-danger mb-3">
+    <h5 class="alert-heading mb-2"><i class="fas fa-ban"></i> SKT Dolmuş Ürünler — Kullanmayın!</h5>
+    <ul class="mb-0">
+    {% for x in skt_dolmus %}
+        <li>
+            <a href="{{ url_for('ilaclar' if x.tip=='ilac' else 'gubreler') }}" class="alert-link">{{ x.urun.ad }}</a>
+            {% if x.urun.lot_no %}<small class="text-muted">(lot: {{ x.urun.lot_no }})</small>{% endif %}
+            — {{ -x.kalan_gun }} gündür dolmuş · SKT: {{ x.urun.son_kullanma_tarihi.strftime('%d.%m.%Y') }}
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% if skt_yaklasan %}
+<div class="alert alert-warning mb-3">
+    <h5 class="alert-heading mb-2"><i class="fas fa-hourglass-half"></i> SKT Yaklaşan Ürünler (30 gün içinde)</h5>
+    <ul class="mb-0">
+    {% for x in skt_yaklasan %}
+        <li>
+            <a href="{{ url_for('ilaclar' if x.tip=='ilac' else 'gubreler') }}" class="alert-link">{{ x.urun.ad }}</a>
+            {% if x.urun.lot_no %}<small class="text-muted">(lot: {{ x.urun.lot_no }})</small>{% endif %}
+            — {{ x.kalan_gun }} gün kaldı · SKT: {{ x.urun.son_kullanma_tarihi.strftime('%d.%m.%Y') }}
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{# --- Tekrar İlaçlama Önerileri --- #}
+{% if tekrar_onerileri %}
+<div class="card mb-3 border-info">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="fas fa-sync-alt"></i> Tekrar İlaçlama Önerileri</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Durum</th>
+                    <th>Bağ</th>
+                    <th>İlaç</th>
+                    <th class="text-end">Son Uygulama</th>
+                    <th class="text-end">Geçen / Aralık</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in tekrar_onerileri %}
+                <tr>
+                    <td>
+                        {% if o.durum == 'geçti' %}
+                            <span class="badge bg-danger">Zamanı geçti (+{{ o.gecikme }}g)</span>
+                        {% elif o.durum == 'zamanı' %}
+                            <span class="badge bg-warning text-dark">Zamanı</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Yaklaşıyor</span>
+                        {% endif %}
+                    </td>
+                    <td><a href="{{ url_for('bag_detay', id=o.bag.id) }}">{{ o.bag.ad }}</a></td>
+                    <td>{{ o.ilac.ad }}{% if o.ilac.hedef_hastalik %} <small class="text-muted">({{ o.ilac.hedef_hastalik }})</small>{% endif %}</td>
+                    <td class="text-end">{{ o.son_tarih.strftime('%d.%m.%Y') }}</td>
+                    <td class="text-end">{{ o.gecen_gun }} / {{ o.aralik }} gün</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('bag_detay', id=o.bag.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Kritik Stok Uyarıları -->
+{% if ilac_uyarilar or gubre_uyarilar %}
+<div class="alert alert-danger mb-4" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle"></i> Kritik Stok Uyarıları!
+    </h4>
+    <p>Aşağıdaki ürünlerin stok seviyesi kritik seviyenin altında:</p>
+    <hr>
+    <div class="row">
+        {% if ilac_uyarilar %}
+        <div class="col-md-6">
+            <h5><i class="fas fa-pills"></i> İlaçlar</h5>
+            <ul class="mb-0">
+                {% for ilac in ilac_uyarilar %}
+                <li>
+                    <strong>{{ ilac.ad }}</strong> — Kalan: {{ ilac.miktar }} {{ ilac.birim }} 
+                    (Min: {{ ilac.min_stok }} {{ ilac.birim }})
+                    <a href="{{ url_for('ilaclar') }}" class="btn btn-sm btn-outline-danger ms-2">Düzenle</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if gubre_uyarilar %}
+        <div class="col-md-6">
+            <h5><i class="fas fa-seedling"></i> Gübreler</h5>
+            <ul class="mb-0">
+                {% for gubre in gubre_uyarilar %}
+                <li>
+                    <strong>{{ gubre.ad }}</strong> — Kalan: {{ gubre.miktar }} {{ gubre.birim }} 
+                    (Min: {{ gubre.min_stok }} {{ gubre.birim }})
+                    <a href="{{ url_for('gubreler') }}" class="btn btn-sm btn-outline-danger ms-2">Düzenle</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Son İşlemler -->
+{% if son_ilaclama or son_gubreleme %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-spray-can"></i> Son İlaçlama</h5>
+            </div>
+            <div class="card-body">
+                {% if son_ilaclama %}
+                <p class="mb-1">
+                    <strong>{{ son_ilaclama.ilac.ad if son_ilaclama.ilac else 'Bilinmeyen' }}</strong>
+                </p>
+                <p class="mb-1">
+                    <i class="fas fa-calendar"></i> {{ son_ilaclama.tarih.strftime('%d.%m.%Y %H:%M') }}
+                </p>
+                <p class="mb-0">
+                    <i class="fas fa-tint"></i> {{ son_ilaclama.kullanilan_miktar }} {{ son_ilaclama.ilac.birim if son_ilaclama.ilac else '' }}
+                </p>
+                {% else %}
+                <p class="text-muted mb-0">Henüz ilaçlama kaydı yok.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-hand-holding-water"></i> Son Gübreleme</h5>
+            </div>
+            <div class="card-body">
+                {% if son_gubreleme %}
+                <p class="mb-1">
+                    <strong>{{ son_gubreleme.gubre.ad if son_gubreleme.gubre else 'Bilinmeyen' }}</strong>
+                </p>
+                <p class="mb-1">
+                    <i class="fas fa-calendar"></i> {{ son_gubreleme.tarih.strftime('%d.%m.%Y %H:%M') if son_gubreleme.tarih else '-' }}
+                </p>
+                <p class="mb-0">
+                    <i class="fas fa-weight"></i> {{ son_gubreleme.kullanilan_miktar }} {{ son_gubreleme.gubre.birim if son_gubreleme.gubre else '' }}
+                </p>
+                {% else %}
+                <p class="text-muted mb-0">Henüz gübreleme kaydı yok.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Bildirim Test -->
+<div class="d-flex justify-content-end mb-3">
+    <form method="POST" action="{{ url_for('bildirim_test') }}" class="d-inline">
+        <button type="submit" class="btn btn-outline-success btn-sm">
+            <i class="fab fa-whatsapp me-1"></i> WhatsApp Test Mesajı Gönder
+        </button>
+    </form>
+</div>
+
+<!-- Hızlı İşlemler -->
 <div class="row mb-4 g-4">
     <div class="col-md-4">
         <div class="card menu-card h-100">

@@ -929,11 +929,11 @@
   {
     "ad": "AMPEXIO (İTHAL)",
     "etken_madde": "%25 Mandipropamid + %24 Zoxamide",
-    "grup": "Fungisit",
-    "hasat_suresi": "21 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
-    "dozaj": "50 g/100 L su"
+    "dozaj": "50 g/100 L su",
+    "birim": "gr",
+    "miktar": 150,
+    "grup": "Fungisit"
   },
   {
     "ad": "ANCORA 5 EC (İMAL)",
@@ -1478,11 +1478,11 @@
   {
     "ad": "AXLERON (İMAL)",
     "etken_madde": "200 g/l Chlorantraniliprole",
-    "grup": "İnsektisit",
-    "hasat_suresi": "3 gün sofralık, 28 gün şaraplık",
-    "uyari": "",
     "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
-    "dozaj": "15 ml/100 l su (yumurta)"
+    "dozaj": "15 ml/100 l su (yumurta)",
+    "birim": "ml",
+    "miktar": 200,
+    "grup": "İnsektisit"
   },
   {
     "ad": "AZAMEX (İMAL)",
@@ -1964,11 +1964,11 @@
   {
     "ad": "BESTGOL 20 EC (İMAL)",
     "etken_madde": "200 g/l Esfenvalerate",
-    "grup": "İnsektisit",
-    "hasat_suresi": "14 Gün",
-    "uyari": "",
     "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
-    "dozaj": "7.5 ml/ 100 l.su larva"
+    "dozaj": "7.5 ml/ 100 l.su larva",
+    "birim": "ml",
+    "miktar": 2000,
+    "grup": "İnsektisit"
   },
   {
     "ad": "BESTKUR 25 EC (İMAL)",
@@ -2801,11 +2801,11 @@
   {
     "ad": "CANTUS WG (İTHAL)",
     "etken_madde": "%50 Boscalid",
-    "grup": "Fungisit",
-    "hasat_suresi": "7 Gün",
-    "uyari": "",
     "hedef_hastalik": "Kurşuni küf (Botrytis cinerea)",
-    "dozaj": "120 g / 100 l su"
+    "dozaj": "120 g / 100 l su",
+    "birim": "gr",
+    "miktar": 2500,
+    "grup": "Fungisit"
   },
   {
     "ad": "CANUTE (İMAL)",
@@ -2963,11 +2963,11 @@
   {
     "ad": "CASPERTIN (İMAL)",
     "etken_madde": "%50 Cymoxanil",
-    "grup": "Fungisit",
-    "hasat_suresi": "28 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
-    "dozaj": "60 g / 100 l su"
+    "dozaj": "60 g / 100 l su",
+    "birim": "gr",
+    "miktar": 800,
+    "grup": "Fungisit"
   },
   {
     "ad": "CASSİNİ (İMAL)",
@@ -7760,11 +7760,11 @@
   {
     "ad": "HEKTHİON 65 EM (İMAL)",
     "etken_madde": "650 g/l Malathion",
-    "grup": "İnsektisit",
-    "hasat_suresi": "7 gün",
-    "uyari": "",
     "hedef_hastalik": "Turunçgil unlubiti (Planococcus citri)",
-    "dozaj": "150 ml /100 L su Tüm dönemlerde"
+    "dozaj": "150 ml /100 L su Tüm dönemlerde",
+    "birim": "ml",
+    "miktar": 2000,
+    "grup": "İnsektisit"
   },
   {
     "ad": "HEKTHİON WP 25 (İMAL)",
@@ -9524,11 +9524,11 @@
   {
     "ad": "LODAGYL (İMAL)",
     "etken_madde": "10 g/l Forchlorfenuron",
-    "grup": "Bitki Gelişim Düzenleyicisi (BGD)",
-    "hasat_suresi": "",
-    "uyari": "",
     "hedef_hastalik": "Zararlı Yok (-)",
-    "dozaj": "50-100 ml/100 1 su"
+    "dozaj": "50-100 ml/100 1 su",
+    "birim": "ml",
+    "miktar": 250,
+    "grup": "Bitki Gelişim Düzenleyicisi (BGD)"
   },
   {
     "ad": "LOKOMOTIVE (İMAL)",
@@ -9659,11 +9659,11 @@
   {
     "ad": "MAJESTE 20 EC (İMAL)",
     "etken_madde": "200 g/l Esfenvalerate",
-    "grup": "İnsektisit",
-    "hasat_suresi": "14 Gün",
-    "uyari": "",
     "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
-    "dozaj": "7.5 ml/ 100 l.su larva(Tüketim amaçlı bağ yaprağı hasadı yapılacak bağ alanlarında kullanılmaz)"
+    "dozaj": "7.5 ml/ 100 l.su larva(Tüketim amaçlı bağ yaprağı hasadı yapılacak bağ alanlarında kullanılmaz)",
+    "birim": "ml",
+    "miktar": 100,
+    "grup": "İnsektisit"
   },
   {
     "ad": "MAK- MALATHİON 20 EM (İMAL)",
@@ -9983,11 +9983,11 @@
   {
     "ad": "MASTERCOP (İTHAL)",
     "etken_madde": "65,82 g/l Metalik bakıra eşdeğer bakır sülfat",
-    "grup": "Fungisit",
-    "hasat_suresi": "21 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola) / Bağda ölükol (Phomopsis viticola)",
-    "dozaj": "125 g/100 L su / 50 ml/ 100 L su"
+    "dozaj": "125 g/100 L su / 50 ml/ 100 L su",
+    "birim": "ml",
+    "miktar": 1000,
+    "grup": "Fungisit"
   },
   {
     "ad": "MASTERGOLD ® (İMAL)",
@@ -10442,11 +10442,11 @@
   {
     "ad": "MOLTOVIN 225 SC (İTHAL)",
     "etken_madde": "190 g/l Metalik Bakıra eşdeğer bazik bakır sülfat + 35 g/l Cymoxanil",
-    "grup": "Fungisit",
-    "hasat_suresi": "21 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
-    "dozaj": "350 ml/100 l su"
+    "dozaj": "350 ml/100 l su",
+    "birim": "ml",
+    "miktar": 1600,
+    "grup": "Fungisit"
   },
   {
     "ad": "MONAST 300 EC (İMAL)",
@@ -10919,11 +10919,11 @@
   {
     "ad": "NINJITSU CS (İTHAL)",
     "etken_madde": "50 g/l Lambda-cyhalothrin",
-    "grup": "İnsektisit",
-    "hasat_suresi": "7 Gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ maymuncukları (Otiorhynchus spp.) / Salkım güvesi (Lobesia botrana)",
-    "dozaj": "20 ml /100 lt.su larva / 25 ml /100 lt.su larva"
+    "dozaj": "20 ml /100 lt.su larva / 25 ml /100 lt.su larva",
+    "birim": "ml",
+    "miktar": 150,
+    "grup": "İnsektisit"
   },
   {
     "ad": "NIPIGON 100 SC (İMAL)",
@@ -11909,11 +11909,11 @@
   {
     "ad": "POLYRAM DF (İTHAL)",
     "etken_madde": "%70 Metiram",
-    "grup": "Fungisit",
-    "hasat_suresi": "56 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola) / Bağda ölükol (Phomopsis viticola)",
-    "dozaj": "200 g /100 l su"
+    "dozaj": "200 g /100 l su",
+    "birim": "gr",
+    "miktar": 8000,
+    "grup": "Fungisit"
   },
   {
     "ad": "POLİMET (İMAL)",
@@ -12089,11 +12089,11 @@
   {
     "ad": "PROCLAİM OPTİ UV 05 WG (İTHAL)",
     "etken_madde": "%5 Emamectin benzoate",
-    "grup": "İnsektisit",
-    "hasat_suresi": "28 gün",
-    "uyari": "",
     "hedef_hastalik": "Salkım güvesi (Lobesia botrana)",
-    "dozaj": "20 g/100 l su (Larva)"
+    "dozaj": "20 g/100 l su (Larva)",
+    "birim": "gr",
+    "miktar": 450,
+    "grup": "İnsektisit"
   },
   {
     "ad": "PRODIGY™ 240 SC (İTHAL)",
@@ -12107,11 +12107,11 @@
   {
     "ad": "PROFILER WG 71,1 (İTHAL)",
     "etken_madde": "%66,7 Fosetyl-Al + %4,44 Fluopicolide",
-    "grup": "Fungisit",
-    "hasat_suresi": "28",
-    "uyari": "",
     "hedef_hastalik": "Bağ mildiyösü (Plasmopara viticola)",
-    "dozaj": "250 g /100 l su"
+    "dozaj": "250 g /100 l su",
+    "birim": "gr",
+    "miktar": 700,
+    "grup": "Fungisit"
   },
   {
     "ad": "PROGUARD 600 (İTHAL)",
@@ -14798,11 +14798,11 @@
   {
     "ad": "TEBUJİ 250 EW (İMAL)",
     "etken_madde": "250 g/l Tebuconazole",
-    "grup": "Fungisit",
-    "hasat_suresi": "21 gün",
-    "uyari": "",
     "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
-    "dozaj": "40 ml / 100 l su"
+    "dozaj": "40 ml / 100 l su",
+    "birim": "ml",
+    "miktar": 15000,
+    "grup": "Fungisit"
   },
   {
     "ad": "TECPASS 200 EW (İMAL)",
@@ -16450,5 +16450,58 @@
     "uyari": "",
     "hedef_hastalik": "Bağ küllemesi (Erysiphe necator)",
     "dozaj": "25 ml / 100 l su"
+  },
+  {
+    "ad": "Vivando",
+    "etken_madde": "500 g/L Metrafenone",
+    "hedef_hastalik": "Külleme",
+    "dozaj": "20",
+    "birim": "ml",
+    "miktar": 250,
+    "grup": "Fungisit"
+  },
+  {
+    "ad": "Racine",
+    "etken_madde": "25 g/l Sodium",
+    "hedef_hastalik": "Yok",
+    "dozaj": "50",
+    "birim": "ml",
+    "miktar": 500
+  },
+  {
+    "ad": "Movento",
+    "etken_madde": "100 g/L Spirotetramat",
+    "hedef_hastalik": "",
+    "dozaj": "100",
+    "birim": "ml",
+    "miktar": 1000,
+    "grup": "İnsektisit"
+  },
+  {
+    "ad": "POWERSOUL FORTE",
+    "etken_madde": "% 80 Thiram",
+    "hedef_hastalik": "",
+    "dozaj": "40",
+    "birim": "gr",
+    "miktar": 800,
+    "grup": "Fungisit"
+  },
+  {
+    "ad": "Alfosetil",
+    "etken_madde": "% 80 Fosetly-Al",
+    "hedef_hastalik": "Mildiyö",
+    "dozaj": "400 gr /100 lt su",
+    "birim": "gr",
+    "miktar": 2500,
+    "grup": "Fungisit"
+  },
+  {
+    "ad": "Dolmen",
+    "etken_madde": "400 g/L Buprofezin",
+    "hedef_hastalik": "Kurt zehiri",
+    "dozaj": "20 ml",
+    "birim": "ml",
+    "miktar": 3500,
+    "grup": "İnsektisit"
   }
 ]

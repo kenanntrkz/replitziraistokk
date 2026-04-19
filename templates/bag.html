@@ -107,9 +107,11 @@
                         <a href="{{ url_for('bag_duzenle', id=bag.id) }}" class="btn btn-sm btn-warning">
                             <i class="fas fa-edit"></i> Düzenle
                         </a>
-                        <a href="{{ url_for('bag_sil', id=bag.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Bu bagi silmek istediginize emin misiniz?')">
-                            <i class="fas fa-trash"></i> Sil
-                        </a>
+                        <form method="POST" action="{{ url_for('bag_sil', id=bag.id) }}" style="display:inline" onsubmit="return confirm('Bu bagi silmek istediginize emin misiniz?')">
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> Sil
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

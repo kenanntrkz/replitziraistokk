@@ -19,7 +19,7 @@
         {% if gubreler %}
         <form method="POST" action="{{ url_for('gubre_kullanim') }}">
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="gubre_id" class="form-label">Gübre Seçin</label>
                     <select class="form-select" id="gubre_id" name="gubre_id" required>
                         <option value="">-- Gübre Seçin --</option>
@@ -29,11 +29,20 @@
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label for="kullanilan_miktar" class="form-label">Kullanılan Miktar</label>
+                    <label for="bag_id" class="form-label">Bağ Seçin</label>
+                    <select class="form-select" id="bag_id" name="bag_id">
+                        <option value="">-- Bağ Seçin (Opsiyonel) --</option>
+                        {% for bag in baglar %}
+                        <option value="{{ bag.id }}">{{ bag.ad }} ({{ bag.alan }} dönüm)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="kullanilan_miktar" class="form-label">Miktar (kg)</label>
                     <input type="number" step="0.01" class="form-control" id="kullanilan_miktar" name="kullanilan_miktar" required>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label for="alan" class="form-label">Uygulanan Alan (m2)</label>
+                <div class="col-md-2 mb-3">
+                    <label for="alan" class="form-label">Alan (m²)</label>
                     <input type="number" step="0.01" class="form-control" id="alan" name="alan" placeholder="Opsiyonel">
                 </div>
             </div>
@@ -62,17 +71,19 @@
                     <tr>
                         <th>Tarih</th>
                         <th>Gübre</th>
-                        <th>Kullanılan Miktar</th>
-                        <th>Uygulanan Alan</th>
+                        <th>Bağ</th>
+                        <th>Miktar</th>
+                        <th>Alan</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for kullanim in son_kullanimlar %}
                     <tr>
-                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ kullanim.tarih.strftime('%d.%m.%Y %H:%M') if kullanim.tarih else '-' }}</td>
                         <td>{{ kullanim.gubre.ad }}</td>
+                        <td>{{ kullanim.bag.ad if kullanim.bag else '-' }}</td>
                         <td>{{ kullanim.kullanilan_miktar|round(2) }} {{ kullanim.gubre.birim }}</td>
-                        <td>{% if kullanim.alan %}{{ kullanim.alan }} m2{% else %}-{% endif %}</td>
+                        <td>{% if kullanim.alan %}{{ kullanim.alan }} m²{% else %}-{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -80,7 +91,7 @@
         </div>
         {% else %}
         <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> Henüz gübre kullanım kaydı bulunmuyor.
+            <i class="fas fa-info-circle"></i> Henüz gübre kullanım kaydı bulunmuyor. Yukarıdaki formu kullanarak ilk kaydı oluşturabilirsiniz.
         </div>
         {% endif %}
     </div>

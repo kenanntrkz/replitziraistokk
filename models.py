@@ -120,14 +120,21 @@ class Ilac(db.Model):
     birim = db.Column(db.String(20), nullable=False)  # Stok birimi (ml, lt, gr, kg)
     dozaj = db.Column(db.String(200))  # Doz açıklaması (ör: 20 ml/100 L su)
     grup = db.Column(db.String(50))  # İlaç grubu (Fungisit, İnsektisit, vb.)
-    hasat_suresi = db.Column(db.String(50))  # Son ilaçlama ile hasat arası süre
+    hasat_suresi = db.Column(db.String(50))  # Son ilaçlama ile hasat arası süre (metin)
+    hasat_suresi_gun = db.Column(db.Integer)  # HÖS gün sayısı (hesap için)
     uyari = db.Column(db.Text)  # Uyarı bilgisi
     adet = db.Column(db.Integer)  # Şişe/paket sayısı
     min_stok = db.Column(db.Float, default=100)  # Kritik stok seviyesi (ml/mg)
     ambalaj_miktari = db.Column(db.Float)  # Bir ambalajdaki miktar
     ambalaj_birimi = db.Column(db.String(20))  # Ambalaj birimi (ml, lt, gr, kg)
+    birim_fiyat = db.Column(db.Float)  # TL / birim (maliyet hesabı için)
+    alim_tarihi = db.Column(db.Date)  # Son alım tarihi
+    son_kullanma_tarihi = db.Column(db.Date)  # SKT
+    lot_no = db.Column(db.String(60))  # Parti / lot numarası
+    acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
+    tekrar_araligi_gun = db.Column(db.Integer)  # Tekrar ilaçlama aralığı (gün) — ör. mildiyö için 7-10
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    
+
     def __repr__(self):
         return f"<Ilac {self.ad}>"
     
@@ -148,8 +155,13 @@ class Gubre(db.Model):
     yaprak_dozu = db.Column(db.Float)  # Yaprak dozu: ml/100lt su
     kategori = db.Column(db.String(50))
     not_bilgisi = db.Column(db.Text)
+    birim_fiyat = db.Column(db.Float)  # TL / birim (maliyet hesabı için)
+    alim_tarihi = db.Column(db.Date)  # Son alım tarihi
+    son_kullanma_tarihi = db.Column(db.Date)  # SKT
+    lot_no = db.Column(db.String(60))  # Parti / lot numarası
+    acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    
+
     def __repr__(self):
         return f"<Gubre {self.ad}>"
     
@@ -228,6 +240,38 @@ class IlacKullanim(db.Model):
             gruplanmis[grup_id]["ilaclar"].append(kayit)
         
         return gruplanmis
+
+# Stok hareket logu — her giriş/çıkış/düzeltme bu tabloya düşer
+class StokHareket(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    urun_type = db.Column(db.String(10), nullable=False)  # 'ilac' | 'gubre'
+    urun_id = db.Column(db.Integer, nullable=False)
+    tip = db.Column(db.String(15), nullable=False)  # 'GIRIS' | 'CIKIS' | 'DUZELTME'
+    miktar = db.Column(db.Float, nullable=False)  # + giriş, - çıkış (her iki yönde de mutlak değer yazılır)
+    birim = db.Column(db.String(20))
+    birim_fiyat = db.Column(db.Float)  # o anki birim fiyat (snapshot)
+    not_bilgisi = db.Column(db.Text)
+    referans = db.Column(db.String(60))  # ör: "IlacKullanim#123" veya "yeni_ekleme"
+    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<StokHareket {self.urun_type}:{self.urun_id} {self.tip} {self.miktar}>"
+
+
+# Fotoğraf / dosya eki — herhangi bir kayıt altına bağlanır (bag, ilac_kullanim, gubre_kullanim)
+class Photo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    parent_type = db.Column(db.String(30), nullable=False)  # 'bag' | 'ilac_kullanim' | 'gubre_kullanim'
+    parent_id = db.Column(db.Integer, nullable=False)
+    s3_key = db.Column(db.String(300), nullable=False)  # MinIO objesi (bucket içi yol)
+    mime = db.Column(db.String(100))
+    caption = db.Column(db.Text)
+    ai_teshis = db.Column(db.Text)  # Claude Vision teşhis cevabı
+    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Photo {self.parent_type}:{self.parent_id} {self.s3_key}>"
+
 
 # Gübre Kullanım Kaydı
 class GubreKullanim(db.Model):

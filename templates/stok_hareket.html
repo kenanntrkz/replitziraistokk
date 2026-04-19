@@ -1,0 +1,100 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <h1>
+            <i class="fas fa-exchange-alt me-2"></i>
+            Stok Hareketi — {{ urun.ad }}
+        </h1>
+        <p class="text-muted mb-0">
+            Şu anki stok: <strong>{{ urun.miktar|round(2) }} {{ urun.birim }}</strong>
+            {% if urun.birim_fiyat %} · Birim fiyat: {{ '{:,.2f}'.format(urun.birim_fiyat).replace(',', '.') }} ₺{% endif %}
+        </p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('ilaclar' if urun_type == 'ilac' else 'gubreler') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Listeye Dön
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <small class="text-muted">Toplam Giriş</small>
+                <h4 class="text-success mb-0">{{ toplam_giris|round(2) }} {{ urun.birim }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <small class="text-muted">Toplam Çıkış</small>
+                <h4 class="text-danger mb-0">{{ toplam_cikis|round(2) }} {{ urun.birim }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <small class="text-muted">Alım Maliyeti (snapshot)</small>
+                <h4 class="text-warning mb-0">{{ '{:,.0f}'.format(maliyet_giris).replace(',', '.') }} ₺</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-list me-2"></i>Hareket Geçmişi</h5></div>
+    <div class="card-body">
+        {% if hareketler %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Tip</th>
+                        <th class="text-end">Miktar</th>
+                        <th class="text-end">Birim Fiyat</th>
+                        <th class="text-end">Satır Toplam</th>
+                        <th>Not</th>
+                        <th class="small">Referans</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in hareketler %}
+                    <tr>
+                        <td>{{ h.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            {% if h.tip == 'GIRIS' %}
+                                <span class="badge bg-success">GİRİŞ</span>
+                            {% elif h.tip == 'CIKIS' %}
+                                <span class="badge bg-danger">ÇIKIŞ</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ h.tip }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ h.miktar|round(2) }} {{ h.birim or '' }}</td>
+                        <td class="text-end">{% if h.birim_fiyat %}{{ '{:,.2f}'.format(h.birim_fiyat).replace(',', '.') }} ₺{% else %}-{% endif %}</td>
+                        <td class="text-end">
+                            {% if h.birim_fiyat %}
+                                {{ '{:,.0f}'.format(h.miktar * h.birim_fiyat).replace(',', '.') }} ₺
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>{{ h.not_bilgisi or '-' }}</td>
+                        <td><small class="text-muted">{{ h.referans or '-' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle"></i> Bu ürün için hareket kaydı yok. Yeni alım/kullanımlar otomatik kaydedilir.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

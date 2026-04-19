@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <h1><i class="fas fa-map-marked-alt me-2"></i> Bağ Haritası</h1>
+        <p class="text-muted mb-0">GPS koordinatı olan aktif bağlar. Yeşil: uygun · Kırmızı: HÖS aktif.</p>
+    </div>
+</div>
+
+{% if not pins %}
+<div class="alert alert-warning">
+    <i class="fas fa-info-circle"></i> Haritada gösterilecek GPS koordinatlı bağ bulunamadı.
+    Bağ detay sayfasından GPS giriniz (örn. <code>38.4237, 27.1428</code>).
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body p-0">
+        <div id="harita" style="height: 640px;"></div>
+    </div>
+</div>
+{% endif %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const pins = {{ pins|tojson }};
+if (pins.length) {
+    const map = L.map('harita');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
+
+    const markers = [];
+    pins.forEach(p => {
+        const icon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="width:24px;height:24px;background:${p.renk};border:3px solid white;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+        });
+        const m = L.marker([p.lat, p.lon], { icon })
+            .bindPopup(
+                `<strong>${p.ad}</strong><br>` +
+                `<small>${p.ekim_tipi || '-'}</small><br>` +
+                `Alan: ${p.alan} dönüm<br>` +
+                `Durum: <span style="color:${p.renk}">${p.durum}</span><br>` +
+                (p.son_ilaclama ? `Son ilaçlama: ${p.son_ilaclama}<br>` : '') +
+                `<a href="/bag/detay/${p.id}" class="btn btn-sm btn-primary mt-2">Detay</a>`
+            );
+        m.addTo(map);
+        markers.push(m);
+    });
+
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.2));
+}
+</script>
+{% endblock %}

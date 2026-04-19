@@ -1,0 +1,56 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col">
+        <h1><i class="fas fa-calendar-alt me-2"></i> Tarım Takvimi</h1>
+        <p class="text-muted mb-0">İlaç / gübre kullanımları, HÖS dönemleri ve tekrar önerileri.</p>
+    </div>
+    <div class="col-auto">
+        <div class="d-flex gap-3 small">
+            <span><span class="badge" style="background:#0d6efd">&nbsp;&nbsp;</span> İlaç</span>
+            <span><span class="badge" style="background:#198754">&nbsp;&nbsp;</span> Gübre</span>
+            <span><span class="badge" style="background:#dc3545">&nbsp;&nbsp;</span> HÖS aktif</span>
+            <span><span class="badge" style="background:#ffc107">&nbsp;&nbsp;</span> Tekrar önerisi</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div id="takvim"></div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/tr.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('takvim');
+    const cal = new FullCalendar.Calendar(el, {
+        initialView: 'dayGridMonth',
+        locale: 'tr',
+        height: 750,
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listMonth'
+        },
+        events: '{{ url_for("takvim_feed") }}',
+        eventClick: function(info) {
+            if (info.event.extendedProps.url) {
+                window.location.href = info.event.extendedProps.url;
+            }
+        },
+        eventDidMount: function(info) {
+            if (info.event.extendedProps.description) {
+                info.el.setAttribute('title', info.event.extendedProps.description);
+            }
+        }
+    });
+    cal.render();
+});
+</script>
+{% endblock %}

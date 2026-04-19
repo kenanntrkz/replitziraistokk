@@ -1,0 +1,57 @@
+[
+    {
+        "id": 1,
+        "ad": "Battal",
+        "alan": 21.0,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38.402796, 28.463221",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:29:21",
+        "son_guncelleme": "2026-04-19 22:19:33"
+    },
+    {
+        "id": 2,
+        "ad": "Tarakçı",
+        "alan": 17.0,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38.403685, 28.461566",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:29:50",
+        "son_guncelleme": "2026-04-19 22:20:32"
+    },
+    {
+        "id": 3,
+        "ad": "Kurt Ali ",
+        "alan": 4.25,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38.406717, 28.460693",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:30:13",
+        "son_guncelleme": "2026-04-19 22:21:04"
+    },
+    {
+        "id": 4,
+        "ad": "Ova",
+        "alan": 16.0,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38°25'38.7\"N 28°27'29.2\"E",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:30:18",
+        "son_guncelleme": "2026-04-19 22:21:47"
+    },
+    {
+        "id": 5,
+        "ad": "Çayarkası",
+        "alan": 13.0,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38°25'18.8\"N 28°26'44.2\"E",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:30:27",
+        "son_guncelleme": "2026-04-19 22:22:42"
+    }
+]

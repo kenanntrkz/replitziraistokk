@@ -13,7 +13,161 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app import app, db
-from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag
+from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag, Photo, StokHareket
+from services.notify import send_whatsapp, kritik_stok_mesaji, hos_uyari_mesaji, tekrar_uyari_mesaji
+from services.weather import forecast_for_bag, parse_gps, fetch_forecast
+from services.pdf_defter import zirai_ilac_defteri_pdf
+from services.storage import put_photo, presigned_get, delete_photo, get_bytes
+from services.vision import teshis_et
+
+
+# --- Ad normalize (Python .lower() vs Postgres LOWER() Türkçe İ uyumsuzluğu fix) ---
+def _normalize_ad(s):
+    return (s or "").lower().replace("̇", "").strip()
+
+# --- HÖS (Hasat Öncesi Süre) yardımcıları ---
+def parse_hasat_gun(s):
+    """Serbest metinden HÖS gün sayısını çıkar: '7 gün' -> 7, '21' -> 21, None -> None."""
+    if not s:
+        return None
+    m = re.search(r'(\d+)', str(s))
+    return int(m.group(1)) if m else None
+
+
+def compute_bag_hos(bag_id):
+    """Bir bağın aktif HÖS durumunu döndür.
+    Dönüş: {
+        'guvenli_tarih': date veya None,
+        'kalan_gun': int (negatif ise serbest),
+        'aktif': bool (bugün < guvenli_tarih),
+        'kayitlar': [{'ilac_ad', 'tarih', 'hasat_gun', 'serbest_tarih'}, ...]
+    }
+    """
+    kayitlar = (
+        db.session.query(IlacKullanim, Ilac)
+        .join(Ilac, IlacKullanim.ilac_id == Ilac.id)
+        .filter(IlacKullanim.bag_id == bag_id)
+        .filter(Ilac.hasat_suresi_gun != None)
+        .all()
+    )
+    bugun = datetime.date.today()
+    liste = []
+    en_gec = None
+    for kullanim, ilac in kayitlar:
+        if not kullanim.tarih or not ilac.hasat_suresi_gun:
+            continue
+        uyg_tarih = kullanim.tarih.date() if hasattr(kullanim.tarih, 'date') else kullanim.tarih
+        serbest = uyg_tarih + datetime.timedelta(days=ilac.hasat_suresi_gun)
+        liste.append({
+            'ilac_ad': ilac.ad,
+            'tarih': uyg_tarih,
+            'hasat_gun': ilac.hasat_suresi_gun,
+            'serbest_tarih': serbest,
+        })
+        if en_gec is None or serbest > en_gec:
+            en_gec = serbest
+    kalan = (en_gec - bugun).days if en_gec else None
+    return {
+        'guvenli_tarih': en_gec,
+        'kalan_gun': kalan,
+        'aktif': (en_gec is not None and en_gec > bugun),
+        'kayitlar': sorted(liste, key=lambda x: x['serbest_tarih'], reverse=True),
+    }
+
+
+def compute_all_bag_hos():
+    """Tüm bağlar için HÖS durumunu dön — dashboard için."""
+    sonuc = []
+    for bag in Bag.query.filter_by(aktif=True).all():
+        hos = compute_bag_hos(bag.id)
+        if hos['guvenli_tarih']:
+            sonuc.append({'bag': bag, **hos})
+    # aktif olanlar başta, kalan gün küçükten büyüğe
+    sonuc.sort(key=lambda x: (0 if x['aktif'] else 1, x['kalan_gun'] if x['kalan_gun'] is not None else 9999))
+    return sonuc
+
+
+def compute_tekrar_onerileri(bag_id=None):
+    """Tekrar_araligi_gun ayarlı ilaçlar için (bag, ilac) başına son kullanımdan
+    geçen günü hesaplayıp öneri üret.
+    Dönüş: [{'bag', 'ilac', 'son_tarih', 'gecen_gun', 'aralik', 'gecikme', 'durum'}]
+    durum: 'zamanı' (0..2 gün kala), 'geçti' (aralık geçildi), 'yakın' (aralık-3 içinde)
+    """
+    q = (
+        db.session.query(IlacKullanim, Ilac, Bag)
+        .join(Ilac, IlacKullanim.ilac_id == Ilac.id)
+        .join(Bag, IlacKullanim.bag_id == Bag.id)
+        .filter(Ilac.tekrar_araligi_gun != None)
+        .filter(Ilac.tekrar_araligi_gun > 0)
+        .filter(Bag.aktif == True)
+    )
+    if bag_id is not None:
+        q = q.filter(IlacKullanim.bag_id == bag_id)
+    # Her (bag, ilac) için en son tarihi tut
+    son = {}
+    for k, i, b in q.all():
+        if not k.tarih:
+            continue
+        tar = k.tarih.date() if hasattr(k.tarih, 'date') else k.tarih
+        key = (b.id, i.id)
+        if key not in son or son[key]['tarih'] < tar:
+            son[key] = {'bag': b, 'ilac': i, 'tarih': tar}
+    bugun = datetime.date.today()
+    sonuc = []
+    for v in son.values():
+        ilac = v['ilac']
+        aralik = ilac.tekrar_araligi_gun
+        gecen = (bugun - v['tarih']).days
+        gecikme = gecen - aralik  # 0 ise tam zamanı, pozitif ise geçmiş
+        if gecikme >= 0:
+            durum = 'geçti'
+        elif gecikme >= -2:
+            durum = 'zamanı'
+        elif gecikme >= -5:
+            durum = 'yakın'
+        else:
+            continue  # daha erken
+        sonuc.append({
+            'bag': v['bag'],
+            'ilac': ilac,
+            'son_tarih': v['tarih'],
+            'gecen_gun': gecen,
+            'aralik': aralik,
+            'gecikme': gecikme,
+            'durum': durum,
+        })
+    # Önce 'geçti', sonra 'zamanı', sonra 'yakın'; her grupta gecikmesi büyük önde
+    oncelik = {'geçti': 0, 'zamanı': 1, 'yakın': 2}
+    sonuc.sort(key=lambda x: (oncelik[x['durum']], -x['gecikme']))
+    return sonuc
+
+
+# --- Stok hareket log helper ---
+def log_stok(urun_type, urun_id, tip, miktar, birim=None, birim_fiyat=None, not_bilgisi=None, referans=None):
+    """Stok hareketini kaydet. Çağıran commit'ten sorumlu."""
+    try:
+        hareket = StokHareket(
+            urun_type=urun_type, urun_id=urun_id, tip=tip,
+            miktar=abs(float(miktar)) if miktar is not None else 0,
+            birim=birim, birim_fiyat=birim_fiyat,
+            not_bilgisi=not_bilgisi, referans=referans,
+        )
+        db.session.add(hareket)
+    except Exception as e:
+        app.logger.exception(f'log_stok hatası: {e}')
+
+
+# --- Hedef hastalık canonical key (dropdown gruplama için) ---
+_TR_MAP = str.maketrans("ıİşŞğĞüÜöÖçÇ", "iisSgGuUoOcC")
+def _hastalik_key(s):
+    """Hastalık etiketini canonical hale getir: parantez at, 'bağ/bağda' prefix at, son ek sadeleştir."""
+    if not s:
+        return ""
+    t = re.sub(r'\([^)]*\)', '', s).strip()
+    t = t.translate(_TR_MAP).lower().replace("̇", "")
+    t = re.sub(r'^(bag|bagda)\s+', '', t)
+    t = re.sub(r'(si|su|sı|sü)$', '', t)
+    return t.strip()
 
 # --- GİRİŞ SİSTEMİ ---
 # Kullanıcı adı ve şifre .env dosyasından okunur, yoksa varsayılan değerler kullanılır
@@ -89,6 +243,33 @@ def kritik_stok_email_gonder(kritik_ilaclar, kritik_gubreler):
     except Exception as e:
         app.logger.error('Kritik stok e-posta hatasi: ' + str(e))
         return False
+
+
+def kritik_stok_whatsapp_gonder(kritik_ilaclar, kritik_gubreler):
+    """Kritik stok WhatsApp uyarısı — günde 1 kez."""
+    if not kritik_ilaclar and not kritik_gubreler:
+        return False
+    msg = kritik_stok_mesaji(kritik_ilaclar, kritik_gubreler)
+    ok, _ = send_whatsapp(msg, dedup_key='kritik_stok', dedup_seconds=86400)
+    return ok
+
+
+def hos_whatsapp_gonder(hos_aktif):
+    """HÖS aktif bağlar için WhatsApp uyarısı — günde 1 kez."""
+    msg = hos_uyari_mesaji(hos_aktif)
+    if not msg:
+        return False
+    ok, _ = send_whatsapp(msg, dedup_key='hos_uyari', dedup_seconds=86400)
+    return ok
+
+
+def tekrar_whatsapp_gonder(onerileri):
+    """Tekrar ilaçlama önerileri için WhatsApp uyarısı — günde 1 kez."""
+    msg = tekrar_uyari_mesaji(onerileri)
+    if not msg:
+        return False
+    ok, _ = send_whatsapp(msg, dedup_key='tekrar_uyari', dedup_seconds=86400)
+    return ok
 
 
 def login_required(f):
@@ -206,17 +387,72 @@ def index():
     son_ilaclama = IlacKullanim.query.order_by(IlacKullanim.tarih.desc()).first()
     son_gubreleme = GubreKullanim.query.order_by(GubreKullanim.tarih.desc()).first()
     
-    # Kritik stok e-posta bildirimi (gunde 1 kez)
+    # Kritik stok bildirimleri (gunde 1 kez)
     kritik_stok_email_gonder(kritik_ilaclar, kritik_gubreler)
+    kritik_stok_whatsapp_gonder(kritik_ilaclar, kritik_gubreler)
 
-    return render_template('index.html', 
+    # HÖS (Hasat Öncesi Süre) durumu
+    hos_listesi = compute_all_bag_hos()
+    hos_aktif = [h for h in hos_listesi if h['aktif']]
+    hos_serbest = [h for h in hos_listesi if not h['aktif']]
+
+    # HÖS WhatsApp uyarısı (yaklaşan/aktif olanlar için günde 1 kez)
+    hos_yaklasan = [h for h in hos_aktif if h['kalan_gun'] is not None and h['kalan_gun'] <= 7]
+    if hos_yaklasan:
+        hos_whatsapp_gonder(hos_yaklasan)
+
+    # SKT uyarıları (bugün – 30 gün sonra arası dolacak + zaten dolmuş)
+    bugun = datetime.date.today()
+    skt_sinir = bugun + datetime.timedelta(days=30)
+    skt_yaklasan = []  # [{urun, tip, kalan_gun}]
+    skt_dolmus = []
+    for i in Ilac.query.filter(Ilac.son_kullanma_tarihi != None).all():
+        if i.son_kullanma_tarihi < bugun:
+            skt_dolmus.append({'urun': i, 'tip': 'ilac', 'kalan_gun': (i.son_kullanma_tarihi - bugun).days})
+        elif i.son_kullanma_tarihi <= skt_sinir:
+            skt_yaklasan.append({'urun': i, 'tip': 'ilac', 'kalan_gun': (i.son_kullanma_tarihi - bugun).days})
+    for g in Gubre.query.filter(Gubre.son_kullanma_tarihi != None).all():
+        if g.son_kullanma_tarihi < bugun:
+            skt_dolmus.append({'urun': g, 'tip': 'gubre', 'kalan_gun': (g.son_kullanma_tarihi - bugun).days})
+        elif g.son_kullanma_tarihi <= skt_sinir:
+            skt_yaklasan.append({'urun': g, 'tip': 'gubre', 'kalan_gun': (g.son_kullanma_tarihi - bugun).days})
+    skt_yaklasan.sort(key=lambda x: x['kalan_gun'])
+    skt_dolmus.sort(key=lambda x: x['kalan_gun'])
+
+    # Hava durumu (GPS'i olan ilk aktif bağ için)
+    hava = None
+    hava_bag = None
+    for _bag in Bag.query.filter_by(aktif=True).all():
+        if _bag.gps_koordinat and parse_gps(_bag.gps_koordinat):
+            hava = forecast_for_bag(_bag)
+            hava_bag = _bag
+            if hava:
+                break
+
+    # Tekrar ilaçlama önerileri
+    tekrar_onerileri = compute_tekrar_onerileri()
+
+    # Tekrar önerileri için WhatsApp bildirimi (günde 1 kez dedup)
+    try:
+        tekrar_whatsapp_gonder([o for o in tekrar_onerileri if o['durum'] in ('geçti', 'zamanı')])
+    except Exception as _e:
+        app.logger.warning(f'tekrar_whatsapp_gonder hata: {_e}')
+
+    return render_template('index.html',
         ilac_uyarilar=kritik_ilaclar,
         gubre_uyarilar=kritik_gubreler,
         toplam_ilac=toplam_ilac,
         toplam_gubre=toplam_gubre,
         toplam_bag=toplam_bag,
         son_ilaclama=son_ilaclama,
-        son_gubreleme=son_gubreleme
+        son_gubreleme=son_gubreleme,
+        hos_aktif=hos_aktif,
+        hos_serbest=hos_serbest,
+        hava=hava,
+        hava_bag=hava_bag,
+        skt_yaklasan=skt_yaklasan,
+        skt_dolmus=skt_dolmus,
+        tekrar_onerileri=tekrar_onerileri,
     )
 
 # ----- İLAÇ YÖNETİMİ -----
@@ -234,11 +470,37 @@ def ilaclar():
         grup = request.form.get('grup', '').strip()
         hasat_suresi = request.form.get('hasat_suresi', '').strip()
         uyari = request.form.get('uyari', '').strip()
+        birim_fiyat = request.form.get('birim_fiyat', '').strip()
+        alim_tarihi = request.form.get('alim_tarihi', '').strip()
+        try:
+            birim_fiyat_val = float(birim_fiyat) if birim_fiyat else None
+        except ValueError:
+            birim_fiyat_val = None
+        try:
+            alim_tarihi_val = datetime.datetime.strptime(alim_tarihi, '%Y-%m-%d').date() if alim_tarihi else None
+        except ValueError:
+            alim_tarihi_val = None
+        skt = request.form.get('son_kullanma_tarihi', '').strip()
+        lot_no = request.form.get('lot_no', '').strip() or None
+        acilma = request.form.get('acilma_tarihi', '').strip()
+        try:
+            skt_val = datetime.datetime.strptime(skt, '%Y-%m-%d').date() if skt else None
+        except ValueError:
+            skt_val = None
+        try:
+            acilma_val = datetime.datetime.strptime(acilma, '%Y-%m-%d').date() if acilma else None
+        except ValueError:
+            acilma_val = None
+        _tra = request.form.get('tekrar_araligi_gun', '').strip()
+        try:
+            tekrar_val = int(_tra) if _tra else None
+        except ValueError:
+            tekrar_val = None
         kaydet_json = 'kaydet_json' in request.form
 
         # Aynı isimde ilaç varsa miktarı güncelle, yoksa yeni kayıt aç
         mevcut_ilac = Ilac.query.filter(
-            db.func.lower(Ilac.ad) == ad.lower().strip()
+            db.func.lower(Ilac.ad) == _normalize_ad(ad)
         ).first()
 
         if mevcut_ilac:
@@ -253,8 +515,24 @@ def ilaclar():
                 mevcut_ilac.grup = grup
             if hasat_suresi and not mevcut_ilac.hasat_suresi:
                 mevcut_ilac.hasat_suresi = hasat_suresi
+                mevcut_ilac.hasat_suresi_gun = parse_hasat_gun(hasat_suresi)
             if uyari and not mevcut_ilac.uyari:
                 mevcut_ilac.uyari = uyari
+            if birim_fiyat_val is not None:
+                mevcut_ilac.birim_fiyat = birim_fiyat_val
+            if alim_tarihi_val:
+                mevcut_ilac.alim_tarihi = alim_tarihi_val
+            if skt_val:
+                mevcut_ilac.son_kullanma_tarihi = skt_val
+            if lot_no:
+                mevcut_ilac.lot_no = lot_no
+            if acilma_val:
+                mevcut_ilac.acilma_tarihi = acilma_val
+            if tekrar_val is not None:
+                mevcut_ilac.tekrar_araligi_gun = tekrar_val
+            log_stok('ilac', mevcut_ilac.id, 'GIRIS', miktar,
+                     birim=mevcut_ilac.birim, birim_fiyat=birim_fiyat_val,
+                     not_bilgisi='Stok ekleme', referans='ilac_ekle')
             db.session.commit()
             flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut_ilac.miktar} {mevcut_ilac.birim}', 'success')
         else:
@@ -267,9 +545,20 @@ def ilaclar():
                 dozaj=dozaj,
                 grup=grup,
                 hasat_suresi=hasat_suresi,
-                uyari=uyari
+                hasat_suresi_gun=parse_hasat_gun(hasat_suresi),
+                uyari=uyari,
+                birim_fiyat=birim_fiyat_val,
+                alim_tarihi=alim_tarihi_val,
+                son_kullanma_tarihi=skt_val,
+                lot_no=lot_no,
+                acilma_tarihi=acilma_val,
+                tekrar_araligi_gun=tekrar_val,
             )
             db.session.add(yeni_ilac)
+            db.session.flush()
+            log_stok('ilac', yeni_ilac.id, 'GIRIS', miktar,
+                     birim=birim, birim_fiyat=birim_fiyat_val,
+                     not_bilgisi='İlk kayıt', referans='ilac_ekle')
             db.session.commit()
         
         # İlacı JSON dosyasına da kaydet
@@ -403,7 +692,35 @@ def ilaclar():
             'dusuk': (tr is not None and tr < 1)
         }
 
-    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar, ilac_hesaplar=ilac_hesaplar))
+    # Son uygulama tarihleri (her ilaç için en son kullanım)
+    from sqlalchemy import func as _sql_func
+    ilac_son_uygulama = dict(
+        db.session.query(IlacKullanim.ilac_id, _sql_func.max(IlacKullanim.tarih))
+        .group_by(IlacKullanim.ilac_id).all()
+    )
+
+    # Hedef hastalık dropdown (canonical key ile grupla) → [(label, key), ...]
+    _grups = {}
+    for il in ilaclar:
+        if not il.hedef_hastalik:
+            continue
+        for h in il.hedef_hastalik.split('/'):
+            h = h.strip()
+            if not h:
+                continue
+            k = _hastalik_key(h)
+            if not k:
+                continue
+            _grups.setdefault(k, [])
+            if h not in _grups[k]:
+                _grups[k].append(h)
+    hastalik_dropdown = []
+    for k, labels in _grups.items():
+        labels_sorted = sorted(labels, key=lambda s: (0 if not s.lower().startswith('bağ') else 1, len(s)))
+        hastalik_dropdown.append((labels_sorted[0], k))
+    hastalik_dropdown.sort(key=lambda x: x[0])
+
+    response = make_response(render_template('ilac.html', ilaclar=ilaclar, initial_ilaclar=initial_ilaclar, ilac_hesaplar=ilac_hesaplar, ilac_son_uygulama=ilac_son_uygulama, hastalik_dropdown=hastalik_dropdown))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
@@ -426,9 +743,36 @@ def ilac_duzenle(id):
     ilac.dozaj = request.form.get('dozaj', '').strip()
     ilac.grup = request.form.get('grup', '').strip()
     ilac.hasat_suresi = request.form.get('hasat_suresi', '').strip()
+    ilac.hasat_suresi_gun = parse_hasat_gun(ilac.hasat_suresi)
     ilac.uyari = request.form.get('uyari', '').strip()
     ilac.min_stok = float(request.form.get('min_stok', 100))
-    
+    _bf = request.form.get('birim_fiyat', '').strip()
+    _at = request.form.get('alim_tarihi', '').strip()
+    try:
+        ilac.birim_fiyat = float(_bf) if _bf else None
+    except ValueError:
+        pass
+    try:
+        ilac.alim_tarihi = datetime.datetime.strptime(_at, '%Y-%m-%d').date() if _at else None
+    except ValueError:
+        pass
+    _skt = request.form.get('son_kullanma_tarihi', '').strip()
+    _ac = request.form.get('acilma_tarihi', '').strip()
+    ilac.lot_no = request.form.get('lot_no', '').strip() or None
+    try:
+        ilac.son_kullanma_tarihi = datetime.datetime.strptime(_skt, '%Y-%m-%d').date() if _skt else None
+    except ValueError:
+        pass
+    try:
+        ilac.acilma_tarihi = datetime.datetime.strptime(_ac, '%Y-%m-%d').date() if _ac else None
+    except ValueError:
+        pass
+    _tra = request.form.get('tekrar_araligi_gun', '').strip()
+    try:
+        ilac.tekrar_araligi_gun = int(_tra) if _tra else None
+    except ValueError:
+        pass
+
     # Veritabanına kaydet
     db.session.commit()
     
@@ -497,10 +841,31 @@ def gubreler():
         uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
         yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
         not_bilgisi = request.form['not_bilgisi']
-        
+        _gbf = request.form.get('birim_fiyat', '').strip()
+        _gat = request.form.get('alim_tarihi', '').strip()
+        try:
+            g_birim_fiyat = float(_gbf) if _gbf else None
+        except ValueError:
+            g_birim_fiyat = None
+        try:
+            g_alim_tarihi = datetime.datetime.strptime(_gat, '%Y-%m-%d').date() if _gat else None
+        except ValueError:
+            g_alim_tarihi = None
+        _gskt = request.form.get('son_kullanma_tarihi', '').strip()
+        g_lot_no = request.form.get('lot_no', '').strip() or None
+        _gac = request.form.get('acilma_tarihi', '').strip()
+        try:
+            g_skt = datetime.datetime.strptime(_gskt, '%Y-%m-%d').date() if _gskt else None
+        except ValueError:
+            g_skt = None
+        try:
+            g_acilma = datetime.datetime.strptime(_gac, '%Y-%m-%d').date() if _gac else None
+        except ValueError:
+            g_acilma = None
+
         # Aynı isimde gübre varsa miktarı güncelle, yoksa yeni kayıt aç
         mevcut = Gubre.query.filter(
-            db.func.lower(Gubre.ad) == ad.lower().strip()
+            db.func.lower(Gubre.ad) == _normalize_ad(ad)
         ).first()
 
         if mevcut:
@@ -516,6 +881,19 @@ def gubreler():
                 mevcut.uygulama_dozu = uygulama_dozu
             if yaprak_dozu and not mevcut.yaprak_dozu:
                 mevcut.yaprak_dozu = yaprak_dozu
+            if g_birim_fiyat is not None:
+                mevcut.birim_fiyat = g_birim_fiyat
+            if g_alim_tarihi:
+                mevcut.alim_tarihi = g_alim_tarihi
+            if g_skt:
+                mevcut.son_kullanma_tarihi = g_skt
+            if g_lot_no:
+                mevcut.lot_no = g_lot_no
+            if g_acilma:
+                mevcut.acilma_tarihi = g_acilma
+            log_stok('gubre', mevcut.id, 'GIRIS', miktar,
+                     birim=mevcut.birim, birim_fiyat=g_birim_fiyat,
+                     not_bilgisi='Stok ekleme', referans='gubre_ekle')
             db.session.commit()
             flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut.miktar} {mevcut.birim}', 'success')
         else:
@@ -528,16 +906,30 @@ def gubreler():
                 kullanim_alani=kullanim_alani,
                 uygulama_dozu=uygulama_dozu,
                 yaprak_dozu=yaprak_dozu,
-                not_bilgisi=not_bilgisi
+                not_bilgisi=not_bilgisi,
+                birim_fiyat=g_birim_fiyat,
+                alim_tarihi=g_alim_tarihi,
+                son_kullanma_tarihi=g_skt,
+                lot_no=g_lot_no,
+                acilma_tarihi=g_acilma,
             )
             db.session.add(yeni_gubre)
+            db.session.flush()
+            log_stok('gubre', yeni_gubre.id, 'GIRIS', miktar,
+                     birim=birim, birim_fiyat=g_birim_fiyat,
+                     not_bilgisi='İlk kayıt', referans='gubre_ekle')
             db.session.commit()
             flash(f'{ad} gübre olarak eklendi.', 'success')
         return redirect(url_for('gubreler'))
     
     # Tüm gübreleri getir
     gubreler = Gubre.query.all()
-    return render_template('gubre.html', gubreler=gubreler)
+    from sqlalchemy import func as _sql_func
+    gubre_son_uygulama = dict(
+        db.session.query(GubreKullanim.gubre_id, _sql_func.max(GubreKullanim.tarih))
+        .group_by(GubreKullanim.gubre_id).all()
+    )
+    return render_template('gubre.html', gubreler=gubreler, gubre_son_uygulama=gubre_son_uygulama)
 
 @app.route('/gubre/duzenle/<int:id>', methods=['POST'])
 @login_required
@@ -552,7 +944,28 @@ def gubre_duzenle(id):
     gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
     gubre.yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
     gubre.not_bilgisi = request.form['not_bilgisi']
-    
+    _gbf = request.form.get('birim_fiyat', '').strip()
+    _gat = request.form.get('alim_tarihi', '').strip()
+    try:
+        gubre.birim_fiyat = float(_gbf) if _gbf else None
+    except ValueError:
+        pass
+    try:
+        gubre.alim_tarihi = datetime.datetime.strptime(_gat, '%Y-%m-%d').date() if _gat else None
+    except ValueError:
+        pass
+    _gskt = request.form.get('son_kullanma_tarihi', '').strip()
+    _gac = request.form.get('acilma_tarihi', '').strip()
+    gubre.lot_no = request.form.get('lot_no', '').strip() or None
+    try:
+        gubre.son_kullanma_tarihi = datetime.datetime.strptime(_gskt, '%Y-%m-%d').date() if _gskt else None
+    except ValueError:
+        pass
+    try:
+        gubre.acilma_tarihi = datetime.datetime.strptime(_gac, '%Y-%m-%d').date() if _gac else None
+    except ValueError:
+        pass
+
     db.session.commit()
     flash('Gübre başarıyla güncellendi', 'success')
     return redirect(url_for('gubreler'))
@@ -651,7 +1064,10 @@ def ilac_kullanim():
                 ilac = Ilac.query.get_or_404(ilac_id)
                 
                 # Dozaj hesaplaması (100 litre suya ne kadar ilaç)
-                gereken_ilac_miktari = (su_miktari / 100) * ilac.dozaj
+                dozaj_str = str(ilac.dozaj or '0')
+                dozaj_match = re.search(r'(\d+(?:[.,]\d+)?)', dozaj_str)
+                dozaj_sayi = float(dozaj_match.group(1).replace(',', '.')) if dozaj_match else 0.0
+                gereken_ilac_miktari = (su_miktari / 100) * dozaj_sayi
                 
                 # Stok kontrolü
                 if gereken_ilac_miktari > ilac.miktar:
@@ -668,8 +1084,14 @@ def ilac_kullanim():
                 
                 # Stoktan düş
                 ilac.miktar -= gereken_ilac_miktari
-                
+
                 db.session.add(yeni_kullanim)
+                db.session.flush()
+                _bag = Bag.query.get(bag_id_val) if bag_id_val else None
+                log_stok('ilac', ilac.id, 'CIKIS', gereken_ilac_miktari,
+                         birim=ilac.birim, birim_fiyat=ilac.birim_fiyat,
+                         not_bilgisi=f'Kullanım — {_bag.ad if _bag else "—"}',
+                         referans=f'IlacKullanim#{yeni_kullanim.id}')
                 basarili_kayitlar += 1
                 
             except Exception as e:
@@ -733,8 +1155,14 @@ def gubre_kullanim():
         
         # Stoktan düş
         gubre.miktar -= kullanilan_miktar
-        
+
         db.session.add(yeni_kullanim)
+        db.session.flush()
+        _bag = Bag.query.get(bag_id) if bag_id else None
+        log_stok('gubre', gubre.id, 'CIKIS', kullanilan_miktar,
+                 birim=gubre.birim, birim_fiyat=gubre.birim_fiyat,
+                 not_bilgisi=f'Kullanım — {_bag.ad if _bag else "—"}',
+                 referans=f'GubreKullanim#{yeni_kullanim.id}')
         db.session.commit()
         flash(f'Gübre kullanımı kaydedildi. {kullanilan_miktar} {gubre.birim} kullanıldı.', 'success')
         return redirect(url_for('gubre_kullanim'))
@@ -799,6 +1227,384 @@ def raporlar():
         ilac_kullanimlari=ilac_kullanimlari,
         gubre_kullanimlari=gubre_kullanimlari
     )
+
+
+@app.route('/raporlar/maliyet')
+@login_required
+def raporlar_maliyet():
+    """Parsel bazlı ve aylık maliyet raporu (ilaç + gübre)."""
+    yil = int(request.args.get('yil', datetime.datetime.now().year))
+    baslangic = datetime.datetime(yil, 1, 1)
+    bitis = datetime.datetime(yil, 12, 31, 23, 59, 59)
+
+    ilac_kayitlari = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= baslangic, IlacKullanim.tarih <= bitis
+    ).all()
+    gubre_kayitlari = GubreKullanim.query.filter(
+        GubreKullanim.tarih >= baslangic, GubreKullanim.tarih <= bitis
+    ).all()
+
+    # Parsel bazlı toplam: {bag_id: {'bag': Bag, 'ilac_tl': X, 'gubre_tl': Y, 'alan': dönüm}}
+    parsel = {}
+    baglar = {b.id: b for b in Bag.query.all()}
+
+    def _parsel_entry(bag_id):
+        if bag_id not in parsel:
+            bag = baglar.get(bag_id)
+            parsel[bag_id] = {
+                'bag': bag,
+                'alan': bag.alan if bag else 0,
+                'ilac_tl': 0.0, 'gubre_tl': 0.0,
+                'ilac_count': 0, 'gubre_count': 0,
+            }
+        return parsel[bag_id]
+
+    aylik = {m: {'ilac': 0.0, 'gubre': 0.0} for m in range(1, 13)}
+
+    for k in ilac_kayitlari:
+        fiyat = (k.ilac.birim_fiyat or 0) if k.ilac else 0
+        tl = (k.kullanilan_miktar or 0) * fiyat
+        if k.bag_id:
+            p = _parsel_entry(k.bag_id)
+            p['ilac_tl'] += tl
+            p['ilac_count'] += 1
+        if k.tarih:
+            aylik[k.tarih.month]['ilac'] += tl
+
+    for k in gubre_kayitlari:
+        fiyat = (k.gubre.birim_fiyat or 0) if k.gubre else 0
+        tl = (k.kullanilan_miktar or 0) * fiyat
+        if k.bag_id:
+            p = _parsel_entry(k.bag_id)
+            p['gubre_tl'] += tl
+            p['gubre_count'] += 1
+        if k.tarih:
+            aylik[k.tarih.month]['gubre'] += tl
+
+    parsel_list = []
+    for b in parsel.values():
+        toplam = b['ilac_tl'] + b['gubre_tl']
+        alan = b['alan'] or 0
+        tl_per_donum = (toplam / alan) if alan > 0 else 0
+        parsel_list.append({
+            **b,
+            'toplam_tl': toplam,
+            'tl_per_donum': tl_per_donum,
+        })
+    parsel_list.sort(key=lambda x: -x['toplam_tl'])
+
+    toplam_ilac = sum(a['ilac'] for a in aylik.values())
+    toplam_gubre = sum(a['gubre'] for a in aylik.values())
+
+    return render_template(
+        'rapor_maliyet.html',
+        yil=yil,
+        parsel_list=parsel_list,
+        aylik=aylik,
+        toplam_ilac=toplam_ilac,
+        toplam_gubre=toplam_gubre,
+        toplam_genel=toplam_ilac + toplam_gubre,
+    )
+
+
+@app.route('/raporlar/pdf')
+@login_required
+def raporlar_pdf():
+    """Resmi Zirai İlaç Defteri — PDF çıktı."""
+    baslangic_tarih = request.args.get('baslangic_tarih')
+    bitis_tarih = request.args.get('bitis_tarih')
+    uygulayici = (request.args.get('uygulayici') or 'Kenan Türköz').strip() or '-'
+
+    now = datetime.datetime.now()
+    if baslangic_tarih:
+        baslangic = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
+    else:
+        baslangic = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    if bitis_tarih:
+        bitis = datetime.datetime.strptime(bitis_tarih, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    else:
+        bitis = now
+
+    kullanimlar = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= baslangic,
+        IlacKullanim.tarih <= bitis
+    ).order_by(IlacKullanim.tarih.asc()).all()
+
+    pdf_bytes = zirai_ilac_defteri_pdf(kullanimlar, baslangic, bitis, uygulayici=uygulayici)
+    filename = f'zirai-ilac-defteri-{baslangic.strftime("%Y%m%d")}-{bitis.strftime("%Y%m%d")}.pdf'
+
+    from flask import Response
+    return Response(
+        pdf_bytes,
+        mimetype='application/pdf',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"',
+            'Content-Length': str(len(pdf_bytes)),
+        },
+    )
+
+
+# ----- HARİTA -----
+@app.route('/baglar/harita')
+@login_required
+def baglar_harita():
+    """Tüm bağları Leaflet haritasında göster."""
+    pins = []
+    all_hos = {h['bag'].id: h for h in compute_all_bag_hos()}
+    for bag in Bag.query.filter_by(aktif=True).all():
+        coords = parse_gps(bag.gps_koordinat) if bag.gps_koordinat else None
+        if not coords:
+            continue
+        hos = all_hos.get(bag.id)
+        renk = '#198754'  # yeşil — ok
+        durum = 'Uygun'
+        if hos and hos['aktif']:
+            renk = '#dc3545'
+            durum = f'HÖS aktif — {hos["kalan_gun"]} gün kaldı'
+        son_ilaclama = bag.son_ilaclama()
+        pins.append({
+            'id': bag.id, 'ad': bag.ad, 'alan': bag.alan,
+            'ekim_tipi': bag.ekim_tipi or '',
+            'lat': coords[0], 'lon': coords[1],
+            'renk': renk, 'durum': durum,
+            'son_ilaclama': son_ilaclama.tarih.strftime('%d.%m.%Y') if son_ilaclama and son_ilaclama.tarih else None,
+        })
+    return render_template('bag_harita.html', pins=pins)
+
+
+# ----- TAKVİM -----
+@app.route('/takvim')
+@login_required
+def takvim():
+    return render_template('takvim.html')
+
+
+@app.route('/takvim/feed.json')
+@login_required
+def takvim_feed():
+    """FullCalendar event feed: ilaç, gübre kullanımları + HÖS blokları."""
+    start_str = request.args.get('start')
+    end_str = request.args.get('end')
+    try:
+        start = datetime.datetime.fromisoformat(start_str.replace('Z', '+00:00')) if start_str else datetime.datetime.now() - datetime.timedelta(days=30)
+        end = datetime.datetime.fromisoformat(end_str.replace('Z', '+00:00')) if end_str else datetime.datetime.now() + datetime.timedelta(days=60)
+    except Exception:
+        start = datetime.datetime.now() - datetime.timedelta(days=30)
+        end = datetime.datetime.now() + datetime.timedelta(days=60)
+
+    start_naive = start.replace(tzinfo=None) if start.tzinfo else start
+    end_naive = end.replace(tzinfo=None) if end.tzinfo else end
+
+    events = []
+
+    ilac_kayitlari = IlacKullanim.query.filter(
+        IlacKullanim.tarih >= start_naive,
+        IlacKullanim.tarih <= end_naive,
+    ).all()
+    for k in ilac_kayitlari:
+        bag_ad = k.bag.ad if k.bag else 'Bilinmeyen'
+        ilac_ad = k.ilac.ad if k.ilac else '-'
+        events.append({
+            'id': f'ilac-{k.id}',
+            'title': f'💊 {ilac_ad} — {bag_ad}',
+            'start': k.tarih.isoformat(),
+            'backgroundColor': '#0d6efd',
+            'borderColor': '#0d6efd',
+            'extendedProps': {
+                'description': f'{round(k.kullanilan_miktar, 2)} {k.ilac.birim if k.ilac else ""} · Su: {k.su_miktari}L',
+                'url': url_for('bag_detay', id=k.bag_id) if k.bag_id else None,
+            },
+        })
+
+    gubre_kayitlari = GubreKullanim.query.filter(
+        GubreKullanim.tarih >= start_naive,
+        GubreKullanim.tarih <= end_naive,
+    ).all()
+    for k in gubre_kayitlari:
+        bag_ad = k.bag.ad if k.bag else 'Bilinmeyen'
+        gubre_ad = k.gubre.ad if k.gubre else '-'
+        events.append({
+            'id': f'gubre-{k.id}',
+            'title': f'🌱 {gubre_ad} — {bag_ad}',
+            'start': k.tarih.isoformat(),
+            'backgroundColor': '#198754',
+            'borderColor': '#198754',
+            'extendedProps': {
+                'description': f'{round(k.kullanilan_miktar, 2)} {k.gubre.birim if k.gubre else ""}',
+                'url': url_for('bag_detay', id=k.bag_id) if k.bag_id else None,
+            },
+        })
+
+    # HÖS blokları (her bag için aktif HÖS aralığını bir blok olarak çiz)
+    try:
+        for h in compute_all_bag_hos():
+            if not h.get('aktif'):
+                continue
+            bag = h['bag']
+            guvenli = h.get('guvenli_tarih')
+            kayitlar = h.get('kayitlar') or []
+            # HÖS bloğunun başlangıcı: en son uygulanan ilacın tarihi
+            son_uyg = max((k['tarih'] for k in kayitlar), default=None)
+            if son_uyg and guvenli:
+                events.append({
+                    'id': f'hos-{bag.id}-{son_uyg.isoformat()}',
+                    'title': f'HÖS — {bag.ad}',
+                    'start': son_uyg.isoformat(),
+                    'end': (guvenli + datetime.timedelta(days=1)).isoformat(),
+                    'backgroundColor': '#dc3545',
+                    'borderColor': '#dc3545',
+                    'display': 'background',
+                    'extendedProps': {
+                        'description': f'Güvenli hasat: {guvenli.strftime("%d.%m.%Y")} ({h["kalan_gun"]} gün)',
+                        'url': url_for('bag_detay', id=bag.id),
+                    },
+                })
+    except Exception as e:
+        app.logger.exception(f'takvim HÖS hatası: {e}')
+
+    return jsonify(events)
+
+
+# ----- STOK HAREKET -----
+@app.route('/stok-hareket/<urun_type>/<int:urun_id>')
+@login_required
+def stok_hareket(urun_type, urun_id):
+    if urun_type not in ('ilac', 'gubre'):
+        flash('Geçersiz ürün tipi.', 'danger')
+        return redirect(url_for('index'))
+    urun = (Ilac if urun_type == 'ilac' else Gubre).query.get_or_404(urun_id)
+    hareketler = StokHareket.query.filter_by(urun_type=urun_type, urun_id=urun_id)\
+        .order_by(StokHareket.tarih.desc()).all()
+
+    toplam_giris = sum(h.miktar for h in hareketler if h.tip == 'GIRIS')
+    toplam_cikis = sum(h.miktar for h in hareketler if h.tip == 'CIKIS')
+    maliyet_giris = sum((h.miktar * (h.birim_fiyat or 0)) for h in hareketler if h.tip == 'GIRIS')
+
+    return render_template(
+        'stok_hareket.html',
+        urun=urun, urun_type=urun_type,
+        hareketler=hareketler,
+        toplam_giris=toplam_giris,
+        toplam_cikis=toplam_cikis,
+        maliyet_giris=maliyet_giris,
+    )
+
+
+# ----- FOTOĞRAF UPLOAD -----
+_PHOTO_PARENT_TYPES = ('bag', 'ilac_kullanim', 'gubre_kullanim')
+
+
+@app.route('/foto/yukle/<parent_type>/<int:parent_id>', methods=['POST'])
+@login_required
+def foto_yukle(parent_type, parent_id):
+    if parent_type not in _PHOTO_PARENT_TYPES:
+        flash('Geçersiz kayıt tipi.', 'danger')
+        return redirect(request.referrer or url_for('index'))
+
+    files = request.files.getlist('foto')
+    caption = request.form.get('caption', '').strip()
+    ai_teshis_iste = request.form.get('ai_teshis') == '1'
+
+    if not files or all((not f.filename for f in files)):
+        flash('Dosya seçilmedi.', 'warning')
+        return redirect(request.referrer or url_for('index'))
+
+    sayac = 0
+    for f in files:
+        if not f or not f.filename:
+            continue
+        try:
+            key, mime = put_photo(f, parent_type, parent_id)
+        except ValueError as ve:
+            flash(f'{f.filename}: {ve}', 'warning')
+            continue
+        except Exception as e:
+            app.logger.exception(f'Foto yükleme hatası: {e}')
+            flash(f'{f.filename}: yüklenemedi.', 'danger')
+            continue
+
+        ai_text = None
+        if ai_teshis_iste and mime.startswith('image/'):
+            try:
+                f.stream.seek(0)
+                image_bytes = f.stream.read()
+                ai_text = teshis_et(image_bytes, mime=mime, user_note=caption)
+            except Exception as e:
+                app.logger.exception(f'AI teşhis hatası: {e}')
+
+        foto = Photo(
+            parent_type=parent_type, parent_id=parent_id,
+            s3_key=key, mime=mime, caption=caption, ai_teshis=ai_text,
+        )
+        db.session.add(foto)
+        sayac += 1
+
+    db.session.commit()
+    if sayac:
+        flash(f'{sayac} dosya yüklendi.' + (' AI teşhis yapıldı.' if ai_teshis_iste else ''), 'success')
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/foto/<int:foto_id>')
+@login_required
+def foto_indir(foto_id):
+    foto = Photo.query.get_or_404(foto_id)
+    url = presigned_get(foto.s3_key, seconds=3600)
+    if not url:
+        flash('Foto bulunamadı.', 'danger')
+        return redirect(url_for('index'))
+    return redirect(url)
+
+
+@app.route('/foto/sil/<int:foto_id>', methods=['POST'])
+@login_required
+def foto_sil(foto_id):
+    foto = Photo.query.get_or_404(foto_id)
+    delete_photo(foto.s3_key)
+    db.session.delete(foto)
+    db.session.commit()
+    flash('Fotoğraf silindi.', 'success')
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/foto/teshis/<int:foto_id>', methods=['POST'])
+@login_required
+def foto_teshis(foto_id):
+    foto = Photo.query.get_or_404(foto_id)
+    image_bytes = get_bytes(foto.s3_key)
+    if not image_bytes:
+        flash('Foto indirilemedi.', 'danger')
+        return redirect(request.referrer or url_for('index'))
+    ai_text = teshis_et(image_bytes, mime=foto.mime or 'image/jpeg', user_note=foto.caption or '')
+    if ai_text:
+        foto.ai_teshis = ai_text
+        db.session.commit()
+        flash('AI teşhis yapıldı.', 'success')
+    else:
+        flash('AI teşhis alınamadı (API key / model kontrol et).', 'warning')
+    return redirect(request.referrer or url_for('index'))
+
+
+def get_photos(parent_type, parent_id):
+    """Template helper: ilgili kayda ait foto listesi (presigned URL ile)."""
+    fotos = Photo.query.filter_by(parent_type=parent_type, parent_id=parent_id)\
+        .order_by(Photo.tarih.desc()).all()
+    out = []
+    for f in fotos:
+        out.append({
+            'id': f.id,
+            'url': presigned_get(f.s3_key, 3600),
+            'mime': f.mime,
+            'caption': f.caption,
+            'ai_teshis': f.ai_teshis,
+            'tarih': f.tarih,
+            'is_image': (f.mime or '').startswith('image/'),
+        })
+    return out
+
+
+app.jinja_env.globals['get_photos'] = get_photos
+
 
 # ----- KARISIM KONTROLÜ -----
 @app.route("/karisim-kontrol", methods=["GET", "POST"])
@@ -1033,13 +1839,21 @@ def bag_detay(id):
         gubre.tr_tarih = utc_to_tr(gubre.tarih)
     
     # Kullanılabilir meteoroloji verileri
-    weather_data = None
-    
-    return render_template('bag_detay.html', 
-                        bag=bag, 
+    weather_data = forecast_for_bag(bag)
+
+    # HÖS (Hasat Öncesi Süre) durumu
+    hos = compute_bag_hos(bag.id)
+
+    # Tekrar ilaçlama önerileri (bu bağ için)
+    tekrar_onerileri = compute_tekrar_onerileri(bag_id=bag.id)
+
+    return render_template('bag_detay.html',
+                        bag=bag,
                         ilac_gruplari=ilac_gruplari_sirali,
                         gubrelemeler=gubrelemeler,
-                        weather_data=weather_data)
+                        weather_data=weather_data,
+                        hos=hos,
+                        tekrar_onerileri=tekrar_onerileri)
 
 @app.route('/yedekleme')
 @login_required
@@ -1369,4 +2183,47 @@ def kritik_stok():
             'durum': 'KRITIK'
         } for gubre in kritik_gubreler],
         'toplam_kritik': len(kritik_ilaclar) + len(kritik_gubreler)
+    })
+
+
+# ----- BİLDİRİM (WhatsApp) -----
+CRON_SECRET = os.environ.get('CRON_SECRET', '')
+
+
+@app.route('/bildirim-test', methods=['POST'])
+@login_required
+def bildirim_test():
+    """Kullanıcı dashboard'dan WhatsApp test mesajı atsın."""
+    ok, durum = send_whatsapp(
+        '✅ Tarım Uygulaması test mesajıdır.\nBildirimler çalışıyor.',
+        dedup_key=None,
+    )
+    if ok:
+        flash('WhatsApp test mesajı gönderildi.', 'success')
+    else:
+        flash(f'WhatsApp gönderilemedi ({durum}). .env WHATSAPP_TO/KEY ve instance bağlantısını kontrol edin.', 'warning')
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/cron/bildirim', methods=['GET', 'POST'])
+def cron_bildirim():
+    """Dışarıdan (systemd timer / cron) tetiklenir. Günlük HÖS + kritik stok WhatsApp tarar."""
+    secret = request.args.get('secret') or request.headers.get('X-Cron-Secret', '')
+    if not CRON_SECRET or secret != CRON_SECRET:
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+
+    kritik_ilaclar = Ilac.query.filter(Ilac.miktar < Ilac.min_stok).all()
+    kritik_gubreler = Gubre.query.filter(Gubre.miktar < Gubre.min_stok).all()
+    kritik_ok = kritik_stok_whatsapp_gonder(kritik_ilaclar, kritik_gubreler)
+
+    hos_listesi = compute_all_bag_hos()
+    hos_yaklasan = [h for h in hos_listesi if h['aktif'] and h['kalan_gun'] is not None and h['kalan_gun'] <= 7]
+    hos_ok = hos_whatsapp_gonder(hos_yaklasan) if hos_yaklasan else False
+
+    return jsonify({
+        'ok': True,
+        'kritik_stok_gonderildi': kritik_ok,
+        'hos_gonderildi': hos_ok,
+        'kritik_sayi': len(kritik_ilaclar) + len(kritik_gubreler),
+        'hos_yaklasan_sayi': len(hos_yaklasan),
     })

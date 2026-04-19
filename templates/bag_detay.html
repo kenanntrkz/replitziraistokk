@@ -24,6 +24,149 @@
     </div>
 </div>
 
+{# Hava Durumu #}
+{% if weather_data and weather_data.gunler %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-cloud-sun me-2"></i>Hava Durumu (5 gün)</h5>
+        <small class="text-muted">Open-Meteo</small>
+    </div>
+    <div class="card-body">
+        {% if weather_data.anlik %}
+        <div class="row align-items-center mb-3 pb-3 border-bottom">
+            <div class="col-md-4 text-center">
+                <i class="fas {{ weather_data.anlik.ikon }} {{ weather_data.anlik.renk }} fa-3x"></i>
+                <div class="fs-2 fw-bold">{{ weather_data.anlik.sicaklik|round(0) }}°C</div>
+                <div class="small text-muted">{{ weather_data.anlik.kod_metin }}</div>
+            </div>
+            <div class="col-md-8">
+                <div class="row text-center">
+                    <div class="col-4"><i class="fas fa-tint text-info"></i><div class="small text-muted">Nem</div><strong>%{{ weather_data.anlik.nem|round(0) }}</strong></div>
+                    <div class="col-4"><i class="fas fa-wind text-secondary"></i><div class="small text-muted">Rüzgar</div><strong>{{ weather_data.anlik.ruzgar_kmh|round(0) }} km/h</strong></div>
+                    <div class="col-4"><i class="fas fa-cloud-rain text-primary"></i><div class="small text-muted">Yağış</div><strong>{{ weather_data.anlik.yagis|round(1) if weather_data.anlik.yagis is not none else 0 }} mm</strong></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="row g-2">
+            {% for g in weather_data.gunler %}
+            <div class="col">
+                <div class="card h-100 text-center border-{{ g.ilaclama.renk }}">
+                    <div class="card-body p-2">
+                        <div class="small text-muted">{{ g.tarih[5:10] }}</div>
+                        <i class="fas {{ g.ikon }} {{ g.renk }} fa-2x my-1"></i>
+                        <div class="small"><strong>{{ g.tmax|round(0) }}°</strong> / {{ g.tmin|round(0) }}°</div>
+                        <div class="small text-primary"><i class="fas fa-tint"></i> %{{ g.yagis_ihtimal|round(0) if g.yagis_ihtimal is not none else 0 }}</div>
+                        <div class="small text-secondary"><i class="fas fa-wind"></i> {{ g.ruzgar_kmh|round(0) }}</div>
+                        <span class="badge bg-{{ g.ilaclama.renk }} mt-1" title="{{ g.ilaclama.sebep }}">{{ g.ilaclama.metin }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% elif not bag.gps_koordinat %}
+<div class="alert alert-light small"><i class="fas fa-info-circle"></i> GPS koordinatı eklenirse bu bağ için hava durumu gösterilir.</div>
+{% endif %}
+
+{# HÖS Banner #}
+{% if hos and hos.guvenli_tarih %}
+    {% if hos.aktif %}
+    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+        <i class="fas fa-triangle-exclamation fa-2x me-3"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Bu bağ şu an hasat yapılamaz!</h5>
+            <p class="mb-0">
+                Güvenli hasat tarihi: <strong>{{ hos.guvenli_tarih.strftime('%d.%m.%Y') }}</strong>
+                <span class="badge bg-dark ms-2">{{ hos.kalan_gun }} gün kaldı</span>
+            </p>
+            <small class="text-muted">Son ilaçlama + en uzun HÖS süresine göre hesaplandı. Kalıntı riski nedeniyle bekleyin.</small>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+        <i class="fas fa-check-circle fa-2x me-3"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">Hasat serbest</h5>
+            <p class="mb-0 small">
+                Son HÖS tarihi {{ hos.guvenli_tarih.strftime('%d.%m.%Y') }} — {{ -hos.kalan_gun }} gün önce dolmuş.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if hos.kayitlar %}
+    <div class="card mb-4">
+        <div class="card-header py-2">
+            <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#hosDetay">
+                <i class="fas fa-chevron-down me-1"></i> HÖS hesabı detayı ({{ hos.kayitlar|length }} kayıt)
+            </button>
+        </div>
+        <div id="hosDetay" class="collapse">
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>İlaç</th><th>Uygulama</th><th>HÖS</th><th>Serbest Tarihi</th></tr></thead>
+                    <tbody>
+                        {% for k in hos.kayitlar %}
+                        <tr {% if k.serbest_tarih > hos.guvenli_tarih %}{# n/a, max olan zaten guvenli_tarih #}{% endif %}>
+                            <td>{{ k.ilac_ad }}</td>
+                            <td>{{ k.tarih.strftime('%d.%m.%Y') }}</td>
+                            <td>{{ k.hasat_gun }} gün</td>
+                            <td>{{ k.serbest_tarih.strftime('%d.%m.%Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
+
+{# Tekrar İlaçlama Önerileri #}
+{% if tekrar_onerileri %}
+<div class="card mb-3 border-info">
+    <div class="card-header bg-info text-white d-flex align-items-center">
+        <h5 class="mb-0"><i class="fas fa-sync-alt me-2"></i>Tekrar İlaçlama Önerileri</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Durum</th>
+                    <th>İlaç</th>
+                    <th>Hedef</th>
+                    <th class="text-end">Son Uygulama</th>
+                    <th class="text-end">Geçen / Aralık</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in tekrar_onerileri %}
+                <tr>
+                    <td>
+                        {% if o.durum == 'geçti' %}
+                            <span class="badge bg-danger">Zamanı geçti (+{{ o.gecikme }}g)</span>
+                        {% elif o.durum == 'zamanı' %}
+                            <span class="badge bg-warning text-dark">Zamanı</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Yaklaşıyor</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ o.ilac.ad }}</td>
+                    <td><small class="text-muted">{{ o.ilac.hedef_hastalik or '-' }}</small></td>
+                    <td class="text-end">{{ o.son_tarih.strftime('%d.%m.%Y') }}</td>
+                    <td class="text-end">{{ o.gecen_gun }} / {{ o.aralik }} gün</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Bag Bilgileri -->
 <div class="row mb-4">
     <div class="col-md-6">
@@ -197,4 +340,83 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Foto galerisi + upload -->
+{% set bag_fotolar = get_photos('bag', bag.id) %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Fotoğraflar / Arşiv</h5>
+        <span class="badge bg-secondary">{{ bag_fotolar|length }}</span>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('foto_yukle', parent_type='bag', parent_id=bag.id) }}"
+              enctype="multipart/form-data" class="row g-2 mb-3">
+            <div class="col-md-5">
+                <input type="file" class="form-control form-control-sm" name="foto"
+                       accept="image/*,application/pdf" multiple required>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" name="caption"
+                       placeholder="Açıklama (hastalık belirtisi, fiş no vb.)">
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <div class="form-check form-check-inline pt-1">
+                    <input class="form-check-input" type="checkbox" id="ai_teshis_{{ bag.id }}" name="ai_teshis" value="1">
+                    <label class="form-check-label small" for="ai_teshis_{{ bag.id }}">AI teşhis</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+                    <i class="fas fa-upload"></i> Yükle
+                </button>
+            </div>
+        </form>
+
+        {% if bag_fotolar %}
+        <div class="row g-2">
+            {% for f in bag_fotolar %}
+            <div class="col-md-3 col-sm-6">
+                <div class="card h-100">
+                    {% if f.is_image and f.url %}
+                        <a href="{{ f.url }}" target="_blank">
+                            <img src="{{ f.url }}" class="card-img-top" style="height:160px;object-fit:cover;" alt="Foto">
+                        </a>
+                    {% else %}
+                        <a href="{{ f.url }}" target="_blank" class="d-flex align-items-center justify-content-center" style="height:160px;background:#f6f6f6;">
+                            <i class="fas fa-file-pdf fa-3x text-danger"></i>
+                        </a>
+                    {% endif %}
+                    <div class="card-body p-2">
+                        <small class="text-muted d-block">{{ f.tarih.strftime('%d.%m.%Y %H:%M') }}</small>
+                        {% if f.caption %}<small class="d-block">{{ f.caption }}</small>{% endif %}
+                        {% if f.ai_teshis %}
+                        <div class="mt-1">
+                            <span class="badge bg-info"><i class="fas fa-robot"></i> AI</span>
+                            <small class="text-muted" style="font-size:.72rem">{{ f.ai_teshis[:180] }}{% if f.ai_teshis|length > 180 %}…{% endif %}</small>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex gap-1 mt-2">
+                            {% if f.is_image and not f.ai_teshis %}
+                            <form method="POST" action="{{ url_for('foto_teshis', foto_id=f.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-outline-info btn-sm" title="AI teşhis">
+                                    <i class="fas fa-robot"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('foto_sil', foto_id=f.id) }}" class="d-inline"
+                                  onsubmit="return confirm('Silinsin mi?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0"><i class="fas fa-info-circle"></i> Bu bağ için henüz fotoğraf yüklenmedi.</p>
+        {% endif %}
+    </div>
+</div>
+
 {% endblock %}
