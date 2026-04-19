@@ -33,25 +33,25 @@
         "son_guncelleme": "2026-04-19 22:21:04"
     },
     {
-        "id": 4,
-        "ad": "Ova",
-        "alan": 16.0,
-        "aciklama": "",
-        "ekim_tipi": "",
-        "gps_koordinat": "38°25'38.7\"N 28°27'29.2\"E",
-        "aktif": true,
-        "olusturma_tarihi": "2025-03-30 22:30:18",
-        "son_guncelleme": "2026-04-19 22:21:47"
-    },
-    {
         "id": 5,
         "ad": "Çayarkası",
         "alan": 13.0,
         "aciklama": "",
         "ekim_tipi": "",
-        "gps_koordinat": "38°25'18.8\"N 28°26'44.2\"E",
+        "gps_koordinat": "38.421921, 28.445503",
         "aktif": true,
         "olusturma_tarihi": "2025-03-30 22:30:27",
-        "son_guncelleme": "2026-04-19 22:22:42"
+        "son_guncelleme": "2026-04-19 22:23:25"
+    },
+    {
+        "id": 4,
+        "ad": "Ova",
+        "alan": 16.0,
+        "aciklama": "",
+        "ekim_tipi": "",
+        "gps_koordinat": "38.427462, 28.457886",
+        "aktif": true,
+        "olusturma_tarihi": "2025-03-30 22:30:18",
+        "son_guncelleme": "2026-04-19 22:23:49"
     }
 ]

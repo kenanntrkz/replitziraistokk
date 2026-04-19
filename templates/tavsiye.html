@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h1><i class="fas fa-robot me-2"></i> AI Tavsiye</h1>
+        <p class="text-muted mb-0">Stoğunuz, HÖS durumu, hava ve fenoloji bağlamı ile sorun. Claude cevaplar.</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Bağ (opsiyonel)</label>
+                    <select name="bag_id" class="form-select">
+                        <option value="">— Genel soru —</option>
+                        {% for b in aktif_baglar %}
+                        <option value="{{ b.id }}" {% if secili_bag == b.id %}selected{% endif %}>{{ b.ad }} ({{ b.alan }} dönüm)</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Parsel seçerseniz, o parselin HÖS/fenoloji/havası bağlama eklenir.</div>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Sorunuz</label>
+                    <textarea name="soru" class="form-control" rows="4" placeholder="Örnek: Bu hafta hangi ilacı kullanayım? / Yaprakta sarı lekeler var, ne olabilir? / Mildiyö için en uygun stoğumdaki ne?">{{ soru or '' }}</textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-1"></i> Sor
+            </button>
+            <small class="text-muted ms-2">Cevap 10-20 saniye sürebilir.</small>
+        </form>
+    </div>
+</div>
+
+{% if cevap %}
+<div class="card border-success">
+    <div class="card-header bg-success text-white">
+        <i class="fas fa-check-circle me-1"></i> Tavsiye
+    </div>
+    <div class="card-body">
+        <div style="white-space: pre-wrap;">{{ cevap }}</div>
+    </div>
+    <div class="card-footer small text-muted">
+        Bu cevap AI üretimidir. Önemli kararlar için ziraat mühendisine danışın.
+    </div>
+</div>
+{% endif %}
+
+<div class="card mt-3">
+    <div class="card-body">
+        <h6 class="text-muted mb-2"><i class="fas fa-lightbulb me-1"></i>Örnek sorular</h6>
+        <ul class="small mb-0">
+            <li>Bu hafta Kozmos parselinde hangi ilaçlamayı yapmalıyım?</li>
+            <li>Stoğumdaki en uygun fungisit mildiyö için hangisi?</li>
+            <li>3 gündür yağmur var, yarın ilaçlasam iş görür mü?</li>
+            <li>Çiçeklenme dönemine girdik, ne öneriyorsun?</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

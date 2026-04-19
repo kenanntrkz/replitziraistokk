@@ -1,0 +1,169 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h1><i class="fas fa-users me-2"></i> İşçilik / Yevmiye</h1>
+        <p class="text-muted mb-0">Kim gelmiş, ne iş yapmış, kaç TL?</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-3 text-primary"><i class="fas fa-coins"></i></div>
+                <div class="fs-4 fw-bold">{{ '{:,.2f}'.format(toplam_tutar) }} ₺</div>
+                <small class="text-muted">Toplam Yevmiye</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <div class="fs-3 text-warning"><i class="fas fa-hourglass-half"></i></div>
+                <div class="fs-4 fw-bold text-warning">{{ '{:,.2f}'.format(bekleyen_tutar) }} ₺</div>
+                <small class="text-muted">Ödenmeyi Bekleyen</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Kayıt -->
+<div class="card mb-3">
+    <div class="card-header"><i class="fas fa-plus me-1"></i> Yeni İşçilik Kaydı</div>
+    <div class="card-body">
+        <form method="POST" class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label">İşçi Adı *</label>
+                <input type="text" name="isci_adi" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tarih</label>
+                <input type="date" name="tarih" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">İş Türü</label>
+                <input type="text" name="is_turu" class="form-control" placeholder="budama, hasat...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Parsel</label>
+                <select name="bag_id" class="form-select">
+                    <option value="">Genel</option>
+                    {% for b in baglar %}
+                    <option value="{{ b.id }}">{{ b.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Saat</label>
+                <input type="number" step="0.5" name="saat" class="form-control" placeholder="8">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Yevmiye (₺) *</label>
+                <input type="number" step="0.01" name="yevmiye" class="form-control" required>
+            </div>
+            <div class="col-md-9">
+                <label class="form-label small text-muted">Not</label>
+                <input type="text" name="not_bilgisi" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="odendi" id="odendi">
+                    <label class="form-check-label" for="odendi">Ödendi</label>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- İşçi Özeti -->
+{% if isci_ozet %}
+<div class="card mb-3">
+    <div class="card-header"><i class="fas fa-user-circle me-1"></i> İşçi Başına Özet</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>İşçi</th>
+                    <th class="text-end">Gün Sayısı</th>
+                    <th class="text-end">Toplam (₺)</th>
+                    <th class="text-end text-success">Ödendi</th>
+                    <th class="text-end text-warning">Bekliyor</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for isci, o in isci_ozet.items() %}
+                <tr>
+                    <td><strong>{{ isci }}</strong></td>
+                    <td class="text-end">{{ o.gun }}</td>
+                    <td class="text-end">{{ '{:,.2f}'.format(o.toplam) }}</td>
+                    <td class="text-end text-success">{{ '{:,.2f}'.format(o.odendi) }}</td>
+                    <td class="text-end text-warning">{{ '{:,.2f}'.format(o.bekliyor) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Detay Liste -->
+<div class="card">
+    <div class="card-header"><i class="fas fa-list me-1"></i> Tüm Kayıtlar</div>
+    <div class="card-body p-0">
+        {% if kayitlar %}
+        <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Tarih</th>
+                    <th>İşçi</th>
+                    <th>İş</th>
+                    <th>Parsel</th>
+                    <th class="text-end">Saat</th>
+                    <th class="text-end">Yevmiye</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for k in kayitlar %}
+                <tr>
+                    <td>{{ k.tarih.strftime('%d.%m.%Y') }}</td>
+                    <td>{{ k.isci_adi }}</td>
+                    <td>{{ k.is_turu or '-' }}</td>
+                    <td>{% if k.bag %}<a href="{{ url_for('bag_detay', id=k.bag.id) }}">{{ k.bag.ad }}</a>{% else %}<em class="text-muted">Genel</em>{% endif %}</td>
+                    <td class="text-end">{{ k.saat|round(1) if k.saat else '-' }}</td>
+                    <td class="text-end">{{ '{:,.2f}'.format(k.yevmiye) }} ₺</td>
+                    <td>
+                        {% if k.odendi %}
+                            <span class="badge bg-success">Ödendi</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Bekliyor</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <form method="POST" action="{{ url_for('iscilik_odendi', id=k.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Ödendi/Bekliyor toggle"><i class="fas fa-exchange-alt"></i></button>
+                        </form>
+                        <form method="POST" action="{{ url_for('iscilik_sil', id=k.id) }}" style="display:inline;" onsubmit="return confirm('Silinsin mi?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="p-3 text-muted text-center">Henüz kayıt yok.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

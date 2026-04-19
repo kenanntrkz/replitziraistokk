@@ -10,11 +10,21 @@
     </div>
 </div>
 
+<div class="alert alert-success d-flex align-items-start">
+    <i class="fas fa-shield-alt fa-2x me-3 mt-1"></i>
+    <div>
+        <h5 class="alert-heading mb-1">Otomatik Yedekleme Aktif</h5>
+        <p class="mb-1">Her gün <strong>saat 03:00</strong>'te PostgreSQL veritabanı ve uygulama dosyaları
+        otomatik olarak MinIO sunucusuna (<code>emlak/tarim/backups/</code>) yüklenir.</p>
+        <small class="text-muted">30 günden eski yedekler otomatik silinir. Sistem: <code>systemd tarim-backup.timer</code></small>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6 mx-auto">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Veri Yedekleme</h5>
+                <h5 class="mb-0">Manuel Yedekleme</h5>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('yedekle') }}">
@@ -33,7 +43,7 @@
                             <label class="form-check-label" for="gubreler">Sadece Gübreler ve Kullanımları</label>
                         </div>
                     </div>
-                    
+
                     <div class="mb-4">
                         <label class="form-label">Dosya Formatı</label>
                         <div class="form-check">
@@ -45,14 +55,14 @@
                             <label class="form-check-label" for="txt">TXT Formatı</label>
                         </div>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-download"></i> Verileri Yedekle
                     </button>
                 </form>
             </div>
         </div>
-        
+
         <div class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">Yedekleme Hakkında</h5>
@@ -60,24 +70,39 @@
             <div class="card-body">
                 <p>
                     <i class="fas fa-info-circle text-info"></i>
-                    Yedekleme işlemi, sistemdeki mevcut tüm ilaç ve gübre verilerini, kullanım kayıtlarıyla birlikte dışa aktarır.
+                    Manuel yedekleme, sistemdeki mevcut tüm ilaç ve gübre verilerini, kullanım kayıtlarıyla birlikte dışa aktarır.
                 </p>
-                
+
                 <details>
-                    <summary>Nasıl Çalışır?</summary>
+                    <summary>Otomatik yedekleme nasıl çalışır?</summary>
+                    <div class="p-3 small">
+                        <ul class="mb-2">
+                            <li><strong>Veritabanı:</strong> <code>pg_dump</code> ile tüm tablolar sıkıştırılır (<code>.sql.gz</code>).</li>
+                            <li><strong>Uygulama:</strong> <code>templates/, static/, services/, data/, *.py</code> bir <code>.tar.gz</code> içinde arşivlenir.</li>
+                            <li><strong>Hedef:</strong> MinIO <code>emlak/tarim/backups/db/</code> ve <code>emlak/tarim/backups/app/</code></li>
+                            <li><strong>Zaman:</strong> Her gün 03:00 UTC (randomize 0–10 dk)</li>
+                            <li><strong>Saklama:</strong> 30 gün (eskileri otomatik silinir)</li>
+                            <li><strong>Log:</strong> <code>/var/log/tarim-backup.log</code></li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>Manuel yedekleme (tarayıcıdan) nasıl çalışır?</summary>
                     <div class="p-3">
                         <ol>
-                            <li>Yedeklenecek veri türünü seçin (tüm veriler veya belirli bir kategori).</li>
+                            <li>Yedeklenecek veri türünü seçin.</li>
                             <li>Çıktı formatını seçin (JSON veya TXT).</li>
                             <li>"Verileri Yedekle" düğmesine tıklayın.</li>
                             <li>Yedek dosyası otomatik olarak bilgisayarınıza indirilecektir.</li>
                         </ol>
                     </div>
                 </details>
-                
-                <p class="text-warning mt-3">
+
+                <p class="text-warning mt-3 mb-0">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Önemli:</strong> Yedek dosyalarınızı güvenli bir yerde saklayın. Veri kaybı durumunda bu yedekler kullanılabilir.
+                    <strong>Önemli:</strong> Otomatik yedekler MinIO'da güvenli şekilde saklanır, fakat
+                    büyük veri kaybı riskine karşı manuel yedeği de önemli dönemeçlerde indirmeniz tavsiye edilir.
                 </p>
             </div>
         </div>

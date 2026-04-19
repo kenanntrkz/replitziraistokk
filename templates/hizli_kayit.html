@@ -1,0 +1,308 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h1><i class="fas fa-microphone-alt me-2"></i> Hızlı Kayıt (Ses + QR)</h1>
+        <p class="text-muted mb-0">Telefonla sahada çalışırken ses komutuyla veya QR/barkod taratarak hızlı giriş.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Ses Komut Kısmı -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-microphone me-1"></i> Sesli İlaç Kullanım Kaydı
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Mikrofona bastıktan sonra şu şekilde söyleyin:<br>
+                    <em>"Kozmos parseline Polyram 250 mililitre, 400 litre su"</em>
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label">Tanıma dili</label>
+                    <select id="lang" class="form-select">
+                        <option value="tr-TR" selected>Türkçe (tr-TR)</option>
+                        <option value="en-US">English (en-US)</option>
+                    </select>
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button id="sesBtn" class="btn btn-lg btn-primary">
+                        <i class="fas fa-microphone me-1"></i> Dinlemeye Başla
+                    </button>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small">Duyulan:</label>
+                    <textarea id="transcript" class="form-control" rows="3" placeholder="Mikrofon konuştuğunuzu buraya yazar..."></textarea>
+                </div>
+
+                <div id="parseSonuc" class="alert alert-info d-none small mb-2"></div>
+
+                <form id="hizliForm" method="POST" action="{{ url_for('ilac_kullanim') }}" class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small">Bağ</label>
+                        <select name="bag_id" id="bag_id" class="form-select form-select-sm">
+                            <option value="">—</option>
+                            {% for b in baglar %}
+                            <option value="{{ b.id }}" data-ad="{{ b.ad|lower }}">{{ b.ad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">İlaç</label>
+                        <select name="ilac_id" id="ilac_id" class="form-select form-select-sm">
+                            <option value="">—</option>
+                            {% for i in ilaclar %}
+                            <option value="{{ i.id }}" data-ad="{{ i.ad|lower }}">{{ i.ad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Miktar (ml/gr)</label>
+                        <input type="number" step="0.01" name="kullanilan_miktar" id="miktar" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Su (litre)</label>
+                        <input type="number" step="0.01" name="su_miktari" id="su" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success w-100 mt-2">
+                            <i class="fas fa-save me-1"></i> Kaydı Oluştur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR / Barkod -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-qrcode me-1"></i> QR / Barkod Okutma
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    İlaç kutusunun üstündeki barkodu veya QR'ı okutun; sistem eşleşen ürünü bulmaya çalışır.
+                </p>
+
+                <div class="d-grid mb-3">
+                    <button id="qrBtn" class="btn btn-lg btn-warning">
+                        <i class="fas fa-camera me-1"></i> Kamerayı Aç
+                    </button>
+                </div>
+
+                <video id="qrVideo" autoplay playsinline muted
+                       style="width:100%; max-height:320px; display:none; background:#000; border-radius:8px;"></video>
+                <canvas id="qrCanvas" style="display:none;"></canvas>
+
+                <div id="qrOkunan" class="alert alert-success d-none small mb-2"></div>
+                <div id="qrHata" class="alert alert-danger d-none small mb-2"></div>
+
+                <div class="mt-2">
+                    <label class="form-label small">Okunan kod:</label>
+                    <input id="qrKod" type="text" class="form-control" readonly>
+                </div>
+
+                <div id="qrEslesen" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <h6 class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>Not</h6>
+        <ul class="small mb-0">
+            <li>Sesli giriş: Chrome/Edge mobilde çalışır, iOS Safari'de kısıtlı. HTTPS zorunlu (zaten var).</li>
+            <li>BarcodeDetector API Chrome/Edge/Android'de var. iOS Safari desteklemiyor — bu durumda fotoğraf yükleyerek sunucu tarafında çözmek gerekebilir.</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+// --- Ses Tanıma ---
+const sesBtn = document.getElementById('sesBtn');
+const transcript = document.getElementById('transcript');
+const parseSonuc = document.getElementById('parseSonuc');
+const bagSel = document.getElementById('bag_id');
+const ilacSel = document.getElementById('ilac_id');
+const miktarInp = document.getElementById('miktar');
+const suInp = document.getElementById('su');
+
+let recognition = null;
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        transcript.value = text;
+        parseSesli(text);
+        sesBtn.innerHTML = '<i class="fas fa-microphone me-1"></i> Tekrar Dinle';
+        sesBtn.classList.remove('btn-danger'); sesBtn.classList.add('btn-primary');
+    };
+    recognition.onerror = (e) => {
+        parseSonuc.className = 'alert alert-danger small';
+        parseSonuc.textContent = 'Hata: ' + e.error;
+        parseSonuc.classList.remove('d-none');
+        sesBtn.innerHTML = '<i class="fas fa-microphone me-1"></i> Dinlemeye Başla';
+        sesBtn.classList.remove('btn-danger'); sesBtn.classList.add('btn-primary');
+    };
+    recognition.onend = () => {
+        if (sesBtn.classList.contains('btn-danger')) {
+            sesBtn.innerHTML = '<i class="fas fa-microphone me-1"></i> Dinlemeye Başla';
+            sesBtn.classList.remove('btn-danger'); sesBtn.classList.add('btn-primary');
+        }
+    };
+} else {
+    sesBtn.disabled = true;
+    sesBtn.innerHTML = '<i class="fas fa-ban me-1"></i> Tarayıcı desteklemiyor';
+}
+
+sesBtn?.addEventListener('click', () => {
+    if (!recognition) return;
+    recognition.lang = document.getElementById('lang').value;
+    try {
+        recognition.start();
+        sesBtn.innerHTML = '<i class="fas fa-stop me-1"></i> Dinleniyor...';
+        sesBtn.classList.remove('btn-primary'); sesBtn.classList.add('btn-danger');
+    } catch (e) { /* zaten çalışıyor */ }
+});
+
+function parseSesli(text) {
+    // Basit keyword eşleme: bağ adı, ilaç adı, sayı (ml/lt/gr) algıla
+    const lower = text.toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
+
+    // Bağ
+    let bagBulundu = '';
+    for (const opt of bagSel.options) {
+        if (opt.value && opt.dataset.ad) {
+            const ad = opt.dataset.ad.replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
+            if (lower.includes(ad)) {
+                bagSel.value = opt.value;
+                bagBulundu = opt.textContent;
+                break;
+            }
+        }
+    }
+
+    // İlaç
+    let ilacBulundu = '';
+    for (const opt of ilacSel.options) {
+        if (opt.value && opt.dataset.ad) {
+            const ad = opt.dataset.ad.replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
+            if (lower.includes(ad)) {
+                ilacSel.value = opt.value;
+                ilacBulundu = opt.textContent;
+                break;
+            }
+        }
+    }
+
+    // Miktar / su
+    const milil = lower.match(/(\d+(?:[.,]\d+)?)\s*(ml|mililitre|gr|gram|g\b)/);
+    const su = lower.match(/(\d+(?:[.,]\d+)?)\s*(l|lt|litre)/);
+    if (milil) miktarInp.value = milil[1].replace(',', '.');
+    if (su) suInp.value = su[1].replace(',', '.');
+
+    parseSonuc.className = 'alert alert-info small';
+    parseSonuc.innerHTML = '<strong>Eşlenen:</strong> ' +
+        'Bağ: ' + (bagBulundu || '—') + ' · ' +
+        'İlaç: ' + (ilacBulundu || '—') + ' · ' +
+        'Miktar: ' + (miktarInp.value || '—') + ' · ' +
+        'Su: ' + (suInp.value || '—');
+    parseSonuc.classList.remove('d-none');
+}
+
+// --- QR / Barkod ---
+const qrBtn = document.getElementById('qrBtn');
+const qrVideo = document.getElementById('qrVideo');
+const qrKod = document.getElementById('qrKod');
+const qrOkunan = document.getElementById('qrOkunan');
+const qrHata = document.getElementById('qrHata');
+const qrEslesen = document.getElementById('qrEslesen');
+
+let stream = null, scanning = false;
+
+qrBtn.addEventListener('click', async () => {
+    if (scanning) {
+        stopQr();
+        return;
+    }
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        qrVideo.srcObject = stream;
+        qrVideo.style.display = 'block';
+        qrBtn.innerHTML = '<i class="fas fa-stop me-1"></i> Kapat';
+        scanning = true;
+        scanLoop();
+    } catch (e) {
+        qrHata.textContent = 'Kamera açılamadı: ' + e.message;
+        qrHata.classList.remove('d-none');
+    }
+});
+
+function stopQr() {
+    scanning = false;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    qrVideo.style.display = 'none';
+    qrBtn.innerHTML = '<i class="fas fa-camera me-1"></i> Kamerayı Aç';
+}
+
+async function scanLoop() {
+    if (!scanning) return;
+    try {
+        if ('BarcodeDetector' in window) {
+            const det = new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39'] });
+            const codes = await det.detect(qrVideo);
+            if (codes.length > 0) {
+                handleCode(codes[0].rawValue);
+                return;
+            }
+        } else {
+            qrHata.textContent = 'Tarayıcı BarcodeDetector desteklemiyor. Kodu elle girin.';
+            qrHata.classList.remove('d-none');
+            stopQr();
+            return;
+        }
+    } catch (e) {
+        // sessizce devam
+    }
+    requestAnimationFrame(scanLoop);
+}
+
+async function handleCode(code) {
+    qrKod.value = code;
+    qrOkunan.textContent = 'Okundu: ' + code;
+    qrOkunan.classList.remove('d-none');
+    stopQr();
+
+    // Sunucuya sor: bu kod bizdeki bir ilacın adı/etken maddesi/lot numarasına eşleşiyor mu?
+    try {
+        const r = await fetch('/api/kod-eslesme?kod=' + encodeURIComponent(code));
+        if (r.ok) {
+            const data = await r.json();
+            if (data.ilac) {
+                qrEslesen.innerHTML = `<div class="alert alert-success small mb-0">
+                    <strong>Bulundu:</strong> ${data.ilac.ad}
+                    <a href="/ilaclar" class="btn btn-sm btn-outline-primary ms-2">İlaçlara Git</a>
+                </div>`;
+                // Form'a da koy
+                for (const opt of ilacSel.options) {
+                    if (opt.value == data.ilac.id) { ilacSel.value = opt.value; break; }
+                }
+            } else {
+                qrEslesen.innerHTML = '<div class="alert alert-warning small mb-0">Sistemde bu koda uygun ürün bulunamadı.</div>';
+            }
+        }
+    } catch (e) { /* ignore */ }
+}
+</script>
+{% endblock %}
