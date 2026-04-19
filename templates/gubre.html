@@ -188,14 +188,6 @@
                     <textarea class="form-control" id="not_bilgisi" name="not_bilgisi" rows="2"></textarea>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label for="gubre_birim_fiyat" class="form-label">Birim Fiyat (₺)</label>
-                    <input type="number" step="0.01" class="form-control" id="gubre_birim_fiyat" name="birim_fiyat">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="gubre_alim_tarihi" class="form-label">Alım Tarihi</label>
-                    <input type="date" class="form-control" id="gubre_alim_tarihi" name="alim_tarihi">
-                </div>
-                <div class="col-md-3 mb-3">
                     <label for="gubre_skt" class="form-label">SKT</label>
                     <input type="date" class="form-control" id="gubre_skt" name="son_kullanma_tarihi">
                 </div>
@@ -440,16 +432,6 @@
                                         <div class="mb-3">
                                             <label class="form-label">Not</label>
                                             <textarea class="form-control" name="not_bilgisi" rows="2">{{ gubre.not_bilgisi or '' }}</textarea>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">Birim Fiyat (₺)</label>
-                                                <input type="number" step="0.01" class="form-control" name="birim_fiyat" value="{{ gubre.birim_fiyat or '' }}">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">Alım Tarihi</label>
-                                                <input type="date" class="form-control" name="alim_tarihi" value="{{ gubre.alim_tarihi.strftime('%Y-%m-%d') if gubre.alim_tarihi else '' }}">
-                                            </div>
                                         </div>
                                         <div class="row">
                                             <div class="col-md-4 mb-3">

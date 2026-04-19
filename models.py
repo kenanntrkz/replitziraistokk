@@ -12,8 +12,6 @@ class Bag(db.Model):
     ekim_tipi = db.Column(db.String(100), nullable=True)  # Üzüm çeşidi, dikim türü vb.
     gps_koordinat = db.Column(db.String(100), nullable=True)  # GPS koordinatları (ör: "38.123456, 27.123456")
     aktif = db.Column(db.Boolean, default=True)  # Bağın aktif/pasif durumu
-    fenoloji_durumu = db.Column(db.String(30))  # Mevcut fenolojik dönem kodu (uyuma, tomurcuk, cicek, ben_dusme, olgun, hasat, hasat_sonrasi)
-    fenoloji_tarih = db.Column(db.Date)  # Bu döneme girdiği tarih (manuel)
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     son_guncelleme = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     
@@ -129,8 +127,6 @@ class Ilac(db.Model):
     min_stok = db.Column(db.Float, default=100)  # Kritik stok seviyesi (ml/mg)
     ambalaj_miktari = db.Column(db.Float)  # Bir ambalajdaki miktar
     ambalaj_birimi = db.Column(db.String(20))  # Ambalaj birimi (ml, lt, gr, kg)
-    birim_fiyat = db.Column(db.Float)  # TL / birim (maliyet hesabı için)
-    alim_tarihi = db.Column(db.Date)  # Son alım tarihi
     son_kullanma_tarihi = db.Column(db.Date)  # SKT
     lot_no = db.Column(db.String(60))  # Parti / lot numarası
     acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
@@ -157,8 +153,6 @@ class Gubre(db.Model):
     yaprak_dozu = db.Column(db.Float)  # Yaprak dozu: ml/100lt su
     kategori = db.Column(db.String(50))
     not_bilgisi = db.Column(db.Text)
-    birim_fiyat = db.Column(db.Float)  # TL / birim (maliyet hesabı için)
-    alim_tarihi = db.Column(db.Date)  # Son alım tarihi
     son_kullanma_tarihi = db.Column(db.Date)  # SKT
     lot_no = db.Column(db.String(60))  # Parti / lot numarası
     acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
@@ -251,102 +245,12 @@ class StokHareket(db.Model):
     tip = db.Column(db.String(15), nullable=False)  # 'GIRIS' | 'CIKIS' | 'DUZELTME'
     miktar = db.Column(db.Float, nullable=False)  # + giriş, - çıkış (her iki yönde de mutlak değer yazılır)
     birim = db.Column(db.String(20))
-    birim_fiyat = db.Column(db.Float)  # o anki birim fiyat (snapshot)
     not_bilgisi = db.Column(db.Text)
     referans = db.Column(db.String(60))  # ör: "IlacKullanim#123" veya "yeni_ekleme"
     tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     def __repr__(self):
         return f"<StokHareket {self.urun_type}:{self.urun_id} {self.tip} {self.miktar}>"
-
-
-# Fotoğraf / dosya eki — herhangi bir kayıt altına bağlanır (bag, ilac_kullanim, gubre_kullanim)
-class Photo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    parent_type = db.Column(db.String(30), nullable=False)  # 'bag' | 'ilac_kullanim' | 'gubre_kullanim'
-    parent_id = db.Column(db.Integer, nullable=False)
-    s3_key = db.Column(db.String(300), nullable=False)  # MinIO objesi (bucket içi yol)
-    mime = db.Column(db.String(100))
-    caption = db.Column(db.Text)
-    ai_teshis = db.Column(db.Text)  # Claude Vision teşhis cevabı
-    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    def __repr__(self):
-        return f"<Photo {self.parent_type}:{self.parent_id} {self.s3_key}>"
-
-
-# Kullanıcı / rol
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(300), nullable=False)
-    ad_soyad = db.Column(db.String(120))
-    rol = db.Column(db.String(20), default='isci', nullable=False)  # 'admin' | 'usta' | 'isci'
-    aktif = db.Column(db.Boolean, default=True)
-    son_giris = db.Column(db.DateTime)
-    olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    def __repr__(self):
-        return f"<User {self.username} ({self.rol})>"
-
-
-# Audit log — kim ne yaptı
-class AuditLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    username = db.Column(db.String(80))  # snapshot (user silinse bile iz kalsın)
-    action = db.Column(db.String(60), nullable=False)  # 'ilac_ekle', 'bag_sil' vb.
-    resource = db.Column(db.String(120))  # ilgili kayıt bilgisi
-    details = db.Column(db.Text)
-    ip = db.Column(db.String(45))
-    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    def __repr__(self):
-        return f"<AuditLog {self.username} {self.action} {self.tarih}>"
-
-
-# Hasat kaydı — parsel başına toplanan ürün + varsa satış
-class Hasat(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bag_id = db.Column(db.Integer, db.ForeignKey('bag.id'), nullable=False)
-    tarih = db.Column(db.Date, nullable=False, default=datetime.date.today)
-    urun = db.Column(db.String(100))  # ör: "Sultaniye", "Kokulu"
-    miktar_kg = db.Column(db.Float, nullable=False)  # kg cinsinden
-    birim_fiyat = db.Column(db.Float)  # TL/kg (satıldıysa)
-    alici = db.Column(db.String(120))
-    satis_tarihi = db.Column(db.Date)
-    not_bilgisi = db.Column(db.Text)
-    olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    bag = db.relationship('Bag', backref=db.backref('hasatlar', lazy=True))
-
-    @property
-    def toplam_tutar(self):
-        if self.birim_fiyat and self.miktar_kg:
-            return round(self.birim_fiyat * self.miktar_kg, 2)
-        return None
-
-    def __repr__(self):
-        return f"<Hasat {self.bag.ad if self.bag else '?'} {self.miktar_kg}kg>"
-
-
-# İşçilik kaydı — yevmiyeli işçi + yaptığı iş
-class IscilikKayit(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bag_id = db.Column(db.Integer, db.ForeignKey('bag.id'), nullable=True)  # bağımsız (toplu) iş varsa null
-    tarih = db.Column(db.Date, nullable=False, default=datetime.date.today)
-    isci_adi = db.Column(db.String(120), nullable=False)
-    is_turu = db.Column(db.String(100))  # ör: budama, ilaçlama, hasat, çapa
-    saat = db.Column(db.Float)  # çalışma saati (opsiyonel)
-    yevmiye = db.Column(db.Float, nullable=False)  # TL
-    odendi = db.Column(db.Boolean, default=False)
-    not_bilgisi = db.Column(db.Text)
-    olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    bag = db.relationship('Bag', backref=db.backref('iscilikler', lazy=True))
-
-    def __repr__(self):
-        return f"<IscilikKayit {self.isci_adi} {self.tarih} {self.yevmiye}₺>"
 
 
 # Gübre Kullanım Kaydı

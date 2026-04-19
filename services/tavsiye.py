@@ -1,4 +1,4 @@
-"""Claude tabanlı bağcılık tavsiye chatbot'u — stok + HÖS + hava + fenoloji bağlamıyla."""
+"""Claude tabanlı bağcılık tavsiye chatbot'u — stok + HÖS + hava bağlamıyla."""
 import os
 import logging
 
@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 _SYSTEM = (
     'Sen deneyimli bir bağ-bahçe ziraat uzmanısın. Türkçe cevap ver. '
-    'Verilen bağlam (stoktaki ilaç/gübreler, HÖS aktif parseller, hava tahmini, '
-    'parsel fenolojik dönemi) çerçevesinde somut, uygulanabilir tavsiye üret. '
+    'Verilen bağlam (stoktaki ilaç/gübreler, HÖS aktif parseller, hava tahmini) '
+    'çerçevesinde somut, uygulanabilir tavsiye üret. '
     'Kurallar: '
     '- Sadece bağlamda verilen ilaç stoğundan seç; olmayan ilaç önerme. '
     '- HÖS (hasat öncesi süre) aktif parselde hasat önerme; yaklaşmışsa uyar. '

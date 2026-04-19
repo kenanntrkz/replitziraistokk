@@ -13,13 +13,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app import app, db
-from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag, Photo, StokHareket, Hasat, IscilikKayit, User, AuditLog
-from werkzeug.security import generate_password_hash, check_password_hash
+from models import Ilac, Gubre, IlacKullanim, GubreKullanim, Bag, StokHareket
 from services.notify import send_whatsapp, kritik_stok_mesaji, hos_uyari_mesaji, tekrar_uyari_mesaji
 from services.weather import forecast_for_bag, parse_gps, fetch_forecast
-from services.pdf_defter import zirai_ilac_defteri_pdf
-from services.storage import put_photo, presigned_get, delete_photo, get_bytes
-from services.vision import teshis_et
 from services.tavsiye import tavsiye_al
 
 
@@ -89,117 +85,6 @@ def compute_all_bag_hos():
     return sonuc
 
 
-# --- Fenolojik dönem bilgisi ---
-# Türkiye'de üzüm bağı fenolojisi (yaklaşık). Aylar ege/akdeniz koşullarına göre.
-FENOLOJI_DONEMLER = [
-    {
-        'kod': 'uyuma', 'ad': 'Uyku (Dinlenme)', 'ikon': 'fa-snowflake', 'renk': '#6c757d',
-        'ay_araligi': 'Aralık – Şubat',
-        'isler': [
-            'Budama (ocak sonu – şubat başı)',
-            'Toprak analizi, organik gübre (ahır/yanmış) serpiştir',
-            'Kaliforniya Koşnili için kış mücadelesi (yazlık yağ + insektisit)',
-            'Telleme / terbiye sisteminin bakımı',
-        ],
-    },
-    {
-        'kod': 'tomurcuk', 'ad': 'Gözler Uyanır / Tomurcuklanma', 'ikon': 'fa-seedling', 'renk': '#28a745',
-        'ay_araligi': 'Mart – Nisan başı',
-        'isler': [
-            'İlk ilaçlama (kurşuni küf / beyaz kurt için erken)',
-            'Sürgün seyreltmesi (2-3 göz bırak)',
-            'Bordo bulamacı (5-2-100) veya bakır hidroksit: mildiyö koruması',
-            'Damlama sulama testleri',
-        ],
-    },
-    {
-        'kod': 'sursme', 'ad': 'Sürme / Yaprak Açma', 'ikon': 'fa-leaf', 'renk': '#20c997',
-        'ay_araligi': 'Nisan',
-        'isler': [
-            'İlk azotlu gübre (ör: 20-20-20 damlama veya amonyum sülfat)',
-            'Mildiyö / külleme koruyucu ilaçlama (10-15cm sürgünde)',
-            'Çapalama / yabancı ot mücadelesi',
-        ],
-    },
-    {
-        'kod': 'cicek', 'ad': 'Çiçeklenme', 'ikon': 'fa-fan', 'renk': '#ffc107',
-        'ay_araligi': 'Mayıs',
-        'isler': [
-            'Çiçek öncesi ve sonrası mildiyö + külleme ilaçlaması ŞART',
-            'Bor + çinko yaprak gübresi (tane tutumu için)',
-            'Koruk dönemi girişi: rüzgar/dolu riskine dikkat',
-            'Filoksera / salkım güvesi izleme',
-        ],
-    },
-    {
-        'kod': 'tane_tutumu', 'ad': 'Tane Tutumu / Koruk', 'ikon': 'fa-apple-alt', 'renk': '#17a2b8',
-        'ay_araligi': 'Mayıs sonu – Haziran',
-        'isler': [
-            '1. salkım güvesi uçuşu — feromon tuzak + insektisit',
-            'Külleme ilaçlaması (kükürt veya triazol grubu)',
-            'Salkım seyreltmesi (kalite için)',
-            'Potasyumlu yaprak gübresi',
-        ],
-    },
-    {
-        'kod': 'ben_dusme', 'ad': 'Ben Düşme (Veraison)', 'ikon': 'fa-wine-bottle', 'renk': '#6f42c1',
-        'ay_araligi': 'Temmuz sonu – Ağustos',
-        'isler': [
-            'Tanelerin renk değişimi — sulama kısılır',
-            '2. salkım güvesi mücadelesi',
-            'Kuş/arı önlemi (file örmeye başla)',
-            'Son ilaçlamalar: HÖS’e dikkat — hasat yakın',
-        ],
-    },
-    {
-        'kod': 'olgun', 'ad': 'Olgunlaşma', 'ikon': 'fa-sun', 'renk': '#fd7e14',
-        'ay_araligi': 'Ağustos – Eylül',
-        'isler': [
-            'Brix/şeker ölçümü',
-            'Ekşime önlemi: yaprak alma, havalandırma',
-            'Ekstrem sıcaklıkta sabah-akşam hafif sulama',
-        ],
-    },
-    {
-        'kod': 'hasat', 'ad': 'Hasat', 'ikon': 'fa-cut', 'renk': '#dc3545',
-        'ay_araligi': 'Eylül – Ekim',
-        'isler': [
-            'HÖS uygun mu — son kontrol',
-            'Sabah erken toplama (serin)',
-            'Ambalaj / kasa temizliği',
-        ],
-    },
-    {
-        'kod': 'hasat_sonrasi', 'ad': 'Hasat Sonrası / Yaprak Döküm', 'ikon': 'fa-tree', 'renk': '#795548',
-        'ay_araligi': 'Ekim sonu – Kasım',
-        'isler': [
-            'Son sulama (derin — kış suyu)',
-            'Kompost / ahır gübresi dökümü',
-            'Bakırlı ilaçlama (yaprak döküldükten sonra kabuk dezenfeksiyonu)',
-        ],
-    },
-]
-
-FENOLOJI_MAP = {d['kod']: d for d in FENOLOJI_DONEMLER}
-
-
-def fenoloji_info(bag):
-    """Bir bağ için fenoloji bilgisi dict'i dön (mevcut, öneri listesi).
-    Dönüş: {'mevcut': {...dönem...}, 'gun': int|None (bu döneme gireli kaç gün), 'sonraki': {...|None}}
-    """
-    if not bag or not bag.fenoloji_durumu:
-        return None
-    mevcut = FENOLOJI_MAP.get(bag.fenoloji_durumu)
-    if not mevcut:
-        return None
-    gun = None
-    if bag.fenoloji_tarih:
-        gun = (datetime.date.today() - bag.fenoloji_tarih).days
-    # Sonraki
-    kodlar = [d['kod'] for d in FENOLOJI_DONEMLER]
-    idx = kodlar.index(bag.fenoloji_durumu) if bag.fenoloji_durumu in kodlar else -1
-    sonraki = FENOLOJI_DONEMLER[idx + 1] if 0 <= idx < len(FENOLOJI_DONEMLER) - 1 else None
-    return {'mevcut': mevcut, 'gun': gun, 'sonraki': sonraki}
 
 
 def compute_tekrar_onerileri(bag_id=None):
@@ -258,13 +143,13 @@ def compute_tekrar_onerileri(bag_id=None):
 
 
 # --- Stok hareket log helper ---
-def log_stok(urun_type, urun_id, tip, miktar, birim=None, birim_fiyat=None, not_bilgisi=None, referans=None):
+def log_stok(urun_type, urun_id, tip, miktar, birim=None, not_bilgisi=None, referans=None):
     """Stok hareketini kaydet. Çağıran commit'ten sorumlu."""
     try:
         hareket = StokHareket(
             urun_type=urun_type, urun_id=urun_id, tip=tip,
             miktar=abs(float(miktar)) if miktar is not None else 0,
-            birim=birim, birim_fiyat=birim_fiyat,
+            birim=birim,
             not_bilgisi=not_bilgisi, referans=referans,
         )
         db.session.add(hareket)
@@ -397,41 +282,9 @@ def login_required(f):
     return decorated_function
 
 
-def role_required(*roller):
-    """Sadece belirtilen rollere izin ver. Eksik rol 403."""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not session.get('logged_in'):
-                return redirect(url_for('giris'))
-            mevcut_rol = session.get('rol', 'admin')  # env fallback admin kabul edilir
-            if mevcut_rol not in roller:
-                flash('Bu sayfa için yetkiniz yok.', 'danger')
-                return redirect(url_for('index'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
-def log_audit(action, resource=None, details=None):
-    """Audit log kaydı oluştur. Çağıran commit'ten sorumlu."""
-    try:
-        entry = AuditLog(
-            user_id=session.get('user_id'),
-            username=session.get('kullanici', 'env_admin'),
-            action=action,
-            resource=resource,
-            details=details,
-            ip=request.remote_addr if request else None,
-        )
-        db.session.add(entry)
-    except Exception as e:
-        app.logger.warning(f'audit_log hatası: {e}')
-
-
 @app.route('/giris', methods=['GET', 'POST'])
 def giris():
-    """Kullanıcı giriş sayfası. Önce User tablosuna bak, yoksa env fallback."""
+    """Kullanıcı giriş sayfası — .env'deki APP_USERNAME/APP_PASSWORD."""
     if session.get('logged_in'):
         return redirect(url_for('index'))
 
@@ -439,38 +292,11 @@ def giris():
         kullanici_adi = request.form.get('kullanici_adi', '')
         sifre = request.form.get('sifre', '')
 
-        # 1) DB'de user var mı?
-        user = None
-        try:
-            user = User.query.filter_by(username=kullanici_adi, aktif=True).first()
-        except Exception:
-            user = None
-
-        if user and check_password_hash(user.password_hash, sifre):
-            session['logged_in'] = True
-            session['kullanici'] = user.username
-            session['user_id'] = user.id
-            session['rol'] = user.rol
-            session['ad_soyad'] = user.ad_soyad or user.username
-            session.permanent = True
-            try:
-                user.son_giris = datetime.datetime.utcnow()
-                log_audit('giris_ok', resource=f'user:{user.username}')
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            flash(f'Hoş geldin, {user.ad_soyad or user.username}!', 'success')
-            return redirect(url_for('index'))
-
-        # 2) Env fallback (geçişte eski admin çalışsın)
         if kullanici_adi == APP_USERNAME and sifre == APP_PASSWORD:
             session['logged_in'] = True
             session['kullanici'] = kullanici_adi
-            session['user_id'] = None
-            session['rol'] = 'admin'
-            session['ad_soyad'] = 'Sistem Yöneticisi'
             session.permanent = True
-            flash('Başarıyla giriş yaptınız (env).', 'success')
+            flash('Başarıyla giriş yaptınız.', 'success')
             return redirect(url_for('index'))
 
         flash('Kullanıcı adı veya şifre hatalı!', 'danger')
@@ -645,16 +471,6 @@ def ilaclar():
         grup = request.form.get('grup', '').strip()
         hasat_suresi = request.form.get('hasat_suresi', '').strip()
         uyari = request.form.get('uyari', '').strip()
-        birim_fiyat = request.form.get('birim_fiyat', '').strip()
-        alim_tarihi = request.form.get('alim_tarihi', '').strip()
-        try:
-            birim_fiyat_val = float(birim_fiyat) if birim_fiyat else None
-        except ValueError:
-            birim_fiyat_val = None
-        try:
-            alim_tarihi_val = datetime.datetime.strptime(alim_tarihi, '%Y-%m-%d').date() if alim_tarihi else None
-        except ValueError:
-            alim_tarihi_val = None
         skt = request.form.get('son_kullanma_tarihi', '').strip()
         lot_no = request.form.get('lot_no', '').strip() or None
         acilma = request.form.get('acilma_tarihi', '').strip()
@@ -693,10 +509,6 @@ def ilaclar():
                 mevcut_ilac.hasat_suresi_gun = parse_hasat_gun(hasat_suresi)
             if uyari and not mevcut_ilac.uyari:
                 mevcut_ilac.uyari = uyari
-            if birim_fiyat_val is not None:
-                mevcut_ilac.birim_fiyat = birim_fiyat_val
-            if alim_tarihi_val:
-                mevcut_ilac.alim_tarihi = alim_tarihi_val
             if skt_val:
                 mevcut_ilac.son_kullanma_tarihi = skt_val
             if lot_no:
@@ -706,7 +518,7 @@ def ilaclar():
             if tekrar_val is not None:
                 mevcut_ilac.tekrar_araligi_gun = tekrar_val
             log_stok('ilac', mevcut_ilac.id, 'GIRIS', miktar,
-                     birim=mevcut_ilac.birim, birim_fiyat=birim_fiyat_val,
+                     birim=mevcut_ilac.birim,
                      not_bilgisi='Stok ekleme', referans='ilac_ekle')
             db.session.commit()
             flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut_ilac.miktar} {mevcut_ilac.birim}', 'success')
@@ -722,8 +534,6 @@ def ilaclar():
                 hasat_suresi=hasat_suresi,
                 hasat_suresi_gun=parse_hasat_gun(hasat_suresi),
                 uyari=uyari,
-                birim_fiyat=birim_fiyat_val,
-                alim_tarihi=alim_tarihi_val,
                 son_kullanma_tarihi=skt_val,
                 lot_no=lot_no,
                 acilma_tarihi=acilma_val,
@@ -732,7 +542,7 @@ def ilaclar():
             db.session.add(yeni_ilac)
             db.session.flush()
             log_stok('ilac', yeni_ilac.id, 'GIRIS', miktar,
-                     birim=birim, birim_fiyat=birim_fiyat_val,
+                     birim=birim,
                      not_bilgisi='İlk kayıt', referans='ilac_ekle')
             db.session.commit()
         
@@ -921,16 +731,6 @@ def ilac_duzenle(id):
     ilac.hasat_suresi_gun = parse_hasat_gun(ilac.hasat_suresi)
     ilac.uyari = request.form.get('uyari', '').strip()
     ilac.min_stok = float(request.form.get('min_stok', 100))
-    _bf = request.form.get('birim_fiyat', '').strip()
-    _at = request.form.get('alim_tarihi', '').strip()
-    try:
-        ilac.birim_fiyat = float(_bf) if _bf else None
-    except ValueError:
-        pass
-    try:
-        ilac.alim_tarihi = datetime.datetime.strptime(_at, '%Y-%m-%d').date() if _at else None
-    except ValueError:
-        pass
     _skt = request.form.get('son_kullanma_tarihi', '').strip()
     _ac = request.form.get('acilma_tarihi', '').strip()
     ilac.lot_no = request.form.get('lot_no', '').strip() or None
@@ -1016,16 +816,6 @@ def gubreler():
         uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
         yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
         not_bilgisi = request.form['not_bilgisi']
-        _gbf = request.form.get('birim_fiyat', '').strip()
-        _gat = request.form.get('alim_tarihi', '').strip()
-        try:
-            g_birim_fiyat = float(_gbf) if _gbf else None
-        except ValueError:
-            g_birim_fiyat = None
-        try:
-            g_alim_tarihi = datetime.datetime.strptime(_gat, '%Y-%m-%d').date() if _gat else None
-        except ValueError:
-            g_alim_tarihi = None
         _gskt = request.form.get('son_kullanma_tarihi', '').strip()
         g_lot_no = request.form.get('lot_no', '').strip() or None
         _gac = request.form.get('acilma_tarihi', '').strip()
@@ -1056,10 +846,6 @@ def gubreler():
                 mevcut.uygulama_dozu = uygulama_dozu
             if yaprak_dozu and not mevcut.yaprak_dozu:
                 mevcut.yaprak_dozu = yaprak_dozu
-            if g_birim_fiyat is not None:
-                mevcut.birim_fiyat = g_birim_fiyat
-            if g_alim_tarihi:
-                mevcut.alim_tarihi = g_alim_tarihi
             if g_skt:
                 mevcut.son_kullanma_tarihi = g_skt
             if g_lot_no:
@@ -1067,7 +853,7 @@ def gubreler():
             if g_acilma:
                 mevcut.acilma_tarihi = g_acilma
             log_stok('gubre', mevcut.id, 'GIRIS', miktar,
-                     birim=mevcut.birim, birim_fiyat=g_birim_fiyat,
+                     birim=mevcut.birim,
                      not_bilgisi='Stok ekleme', referans='gubre_ekle')
             db.session.commit()
             flash(f'{ad} stoğa eklendi → Yeni toplam: {mevcut.miktar} {mevcut.birim}', 'success')
@@ -1082,8 +868,6 @@ def gubreler():
                 uygulama_dozu=uygulama_dozu,
                 yaprak_dozu=yaprak_dozu,
                 not_bilgisi=not_bilgisi,
-                birim_fiyat=g_birim_fiyat,
-                alim_tarihi=g_alim_tarihi,
                 son_kullanma_tarihi=g_skt,
                 lot_no=g_lot_no,
                 acilma_tarihi=g_acilma,
@@ -1091,7 +875,7 @@ def gubreler():
             db.session.add(yeni_gubre)
             db.session.flush()
             log_stok('gubre', yeni_gubre.id, 'GIRIS', miktar,
-                     birim=birim, birim_fiyat=g_birim_fiyat,
+                     birim=birim,
                      not_bilgisi='İlk kayıt', referans='gubre_ekle')
             db.session.commit()
             flash(f'{ad} gübre olarak eklendi.', 'success')
@@ -1119,16 +903,6 @@ def gubre_duzenle(id):
     gubre.uygulama_dozu = float(request.form['uygulama_dozu']) if request.form.get('uygulama_dozu') else None
     gubre.yaprak_dozu = float(request.form['yaprak_dozu']) if request.form.get('yaprak_dozu') else None
     gubre.not_bilgisi = request.form['not_bilgisi']
-    _gbf = request.form.get('birim_fiyat', '').strip()
-    _gat = request.form.get('alim_tarihi', '').strip()
-    try:
-        gubre.birim_fiyat = float(_gbf) if _gbf else None
-    except ValueError:
-        pass
-    try:
-        gubre.alim_tarihi = datetime.datetime.strptime(_gat, '%Y-%m-%d').date() if _gat else None
-    except ValueError:
-        pass
     _gskt = request.form.get('son_kullanma_tarihi', '').strip()
     _gac = request.form.get('acilma_tarihi', '').strip()
     gubre.lot_no = request.form.get('lot_no', '').strip() or None
@@ -1264,7 +1038,7 @@ def ilac_kullanim():
                 db.session.flush()
                 _bag = Bag.query.get(bag_id_val) if bag_id_val else None
                 log_stok('ilac', ilac.id, 'CIKIS', gereken_ilac_miktari,
-                         birim=ilac.birim, birim_fiyat=ilac.birim_fiyat,
+                         birim=ilac.birim,
                          not_bilgisi=f'Kullanım — {_bag.ad if _bag else "—"}',
                          referans=f'IlacKullanim#{yeni_kullanim.id}')
                 basarili_kayitlar += 1
@@ -1335,7 +1109,7 @@ def gubre_kullanim():
         db.session.flush()
         _bag = Bag.query.get(bag_id) if bag_id else None
         log_stok('gubre', gubre.id, 'CIKIS', kullanilan_miktar,
-                 birim=gubre.birim, birim_fiyat=gubre.birim_fiyat,
+                 birim=gubre.birim,
                  not_bilgisi=f'Kullanım — {_bag.ad if _bag else "—"}',
                  referans=f'GubreKullanim#{yeni_kullanim.id}')
         db.session.commit()
@@ -1401,121 +1175,6 @@ def raporlar():
         bitis=bitis,
         ilac_kullanimlari=ilac_kullanimlari,
         gubre_kullanimlari=gubre_kullanimlari
-    )
-
-
-@app.route('/raporlar/maliyet')
-@login_required
-def raporlar_maliyet():
-    """Parsel bazlı ve aylık maliyet raporu (ilaç + gübre)."""
-    yil = int(request.args.get('yil', datetime.datetime.now().year))
-    baslangic = datetime.datetime(yil, 1, 1)
-    bitis = datetime.datetime(yil, 12, 31, 23, 59, 59)
-
-    ilac_kayitlari = IlacKullanim.query.filter(
-        IlacKullanim.tarih >= baslangic, IlacKullanim.tarih <= bitis
-    ).all()
-    gubre_kayitlari = GubreKullanim.query.filter(
-        GubreKullanim.tarih >= baslangic, GubreKullanim.tarih <= bitis
-    ).all()
-
-    # Parsel bazlı toplam: {bag_id: {'bag': Bag, 'ilac_tl': X, 'gubre_tl': Y, 'alan': dönüm}}
-    parsel = {}
-    baglar = {b.id: b for b in Bag.query.all()}
-
-    def _parsel_entry(bag_id):
-        if bag_id not in parsel:
-            bag = baglar.get(bag_id)
-            parsel[bag_id] = {
-                'bag': bag,
-                'alan': bag.alan if bag else 0,
-                'ilac_tl': 0.0, 'gubre_tl': 0.0,
-                'ilac_count': 0, 'gubre_count': 0,
-            }
-        return parsel[bag_id]
-
-    aylik = {m: {'ilac': 0.0, 'gubre': 0.0} for m in range(1, 13)}
-
-    for k in ilac_kayitlari:
-        fiyat = (k.ilac.birim_fiyat or 0) if k.ilac else 0
-        tl = (k.kullanilan_miktar or 0) * fiyat
-        if k.bag_id:
-            p = _parsel_entry(k.bag_id)
-            p['ilac_tl'] += tl
-            p['ilac_count'] += 1
-        if k.tarih:
-            aylik[k.tarih.month]['ilac'] += tl
-
-    for k in gubre_kayitlari:
-        fiyat = (k.gubre.birim_fiyat or 0) if k.gubre else 0
-        tl = (k.kullanilan_miktar or 0) * fiyat
-        if k.bag_id:
-            p = _parsel_entry(k.bag_id)
-            p['gubre_tl'] += tl
-            p['gubre_count'] += 1
-        if k.tarih:
-            aylik[k.tarih.month]['gubre'] += tl
-
-    parsel_list = []
-    for b in parsel.values():
-        toplam = b['ilac_tl'] + b['gubre_tl']
-        alan = b['alan'] or 0
-        tl_per_donum = (toplam / alan) if alan > 0 else 0
-        parsel_list.append({
-            **b,
-            'toplam_tl': toplam,
-            'tl_per_donum': tl_per_donum,
-        })
-    parsel_list.sort(key=lambda x: -x['toplam_tl'])
-
-    toplam_ilac = sum(a['ilac'] for a in aylik.values())
-    toplam_gubre = sum(a['gubre'] for a in aylik.values())
-
-    return render_template(
-        'rapor_maliyet.html',
-        yil=yil,
-        parsel_list=parsel_list,
-        aylik=aylik,
-        toplam_ilac=toplam_ilac,
-        toplam_gubre=toplam_gubre,
-        toplam_genel=toplam_ilac + toplam_gubre,
-    )
-
-
-@app.route('/raporlar/pdf')
-@login_required
-def raporlar_pdf():
-    """Resmi Zirai İlaç Defteri — PDF çıktı."""
-    baslangic_tarih = request.args.get('baslangic_tarih')
-    bitis_tarih = request.args.get('bitis_tarih')
-    uygulayici = (request.args.get('uygulayici') or 'Kenan Türköz').strip() or '-'
-
-    now = datetime.datetime.now()
-    if baslangic_tarih:
-        baslangic = datetime.datetime.strptime(baslangic_tarih, '%Y-%m-%d')
-    else:
-        baslangic = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    if bitis_tarih:
-        bitis = datetime.datetime.strptime(bitis_tarih, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
-    else:
-        bitis = now
-
-    kullanimlar = IlacKullanim.query.filter(
-        IlacKullanim.tarih >= baslangic,
-        IlacKullanim.tarih <= bitis
-    ).order_by(IlacKullanim.tarih.asc()).all()
-
-    pdf_bytes = zirai_ilac_defteri_pdf(kullanimlar, baslangic, bitis, uygulayici=uygulayici)
-    filename = f'zirai-ilac-defteri-{baslangic.strftime("%Y%m%d")}-{bitis.strftime("%Y%m%d")}.pdf'
-
-    from flask import Response
-    return Response(
-        pdf_bytes,
-        mimetype='application/pdf',
-        headers={
-            'Content-Disposition': f'attachment; filename="{filename}"',
-            'Content-Length': str(len(pdf_bytes)),
-        },
     )
 
 
@@ -1653,7 +1312,6 @@ def stok_hareket(urun_type, urun_id):
 
     toplam_giris = sum(h.miktar for h in hareketler if h.tip == 'GIRIS')
     toplam_cikis = sum(h.miktar for h in hareketler if h.tip == 'CIKIS')
-    maliyet_giris = sum((h.miktar * (h.birim_fiyat or 0)) for h in hareketler if h.tip == 'GIRIS')
 
     return render_template(
         'stok_hareket.html',
@@ -1661,124 +1319,7 @@ def stok_hareket(urun_type, urun_id):
         hareketler=hareketler,
         toplam_giris=toplam_giris,
         toplam_cikis=toplam_cikis,
-        maliyet_giris=maliyet_giris,
     )
-
-
-# ----- FOTOĞRAF UPLOAD -----
-_PHOTO_PARENT_TYPES = ('bag', 'ilac_kullanim', 'gubre_kullanim')
-
-
-@app.route('/foto/yukle/<parent_type>/<int:parent_id>', methods=['POST'])
-@login_required
-def foto_yukle(parent_type, parent_id):
-    if parent_type not in _PHOTO_PARENT_TYPES:
-        flash('Geçersiz kayıt tipi.', 'danger')
-        return redirect(request.referrer or url_for('index'))
-
-    files = request.files.getlist('foto')
-    caption = request.form.get('caption', '').strip()
-    ai_teshis_iste = request.form.get('ai_teshis') == '1'
-
-    if not files or all((not f.filename for f in files)):
-        flash('Dosya seçilmedi.', 'warning')
-        return redirect(request.referrer or url_for('index'))
-
-    sayac = 0
-    for f in files:
-        if not f or not f.filename:
-            continue
-        try:
-            key, mime = put_photo(f, parent_type, parent_id)
-        except ValueError as ve:
-            flash(f'{f.filename}: {ve}', 'warning')
-            continue
-        except Exception as e:
-            app.logger.exception(f'Foto yükleme hatası: {e}')
-            flash(f'{f.filename}: yüklenemedi.', 'danger')
-            continue
-
-        ai_text = None
-        if ai_teshis_iste and mime.startswith('image/'):
-            try:
-                f.stream.seek(0)
-                image_bytes = f.stream.read()
-                ai_text = teshis_et(image_bytes, mime=mime, user_note=caption)
-            except Exception as e:
-                app.logger.exception(f'AI teşhis hatası: {e}')
-
-        foto = Photo(
-            parent_type=parent_type, parent_id=parent_id,
-            s3_key=key, mime=mime, caption=caption, ai_teshis=ai_text,
-        )
-        db.session.add(foto)
-        sayac += 1
-
-    db.session.commit()
-    if sayac:
-        flash(f'{sayac} dosya yüklendi.' + (' AI teşhis yapıldı.' if ai_teshis_iste else ''), 'success')
-    return redirect(request.referrer or url_for('index'))
-
-
-@app.route('/foto/<int:foto_id>')
-@login_required
-def foto_indir(foto_id):
-    foto = Photo.query.get_or_404(foto_id)
-    url = presigned_get(foto.s3_key, seconds=3600)
-    if not url:
-        flash('Foto bulunamadı.', 'danger')
-        return redirect(url_for('index'))
-    return redirect(url)
-
-
-@app.route('/foto/sil/<int:foto_id>', methods=['POST'])
-@login_required
-def foto_sil(foto_id):
-    foto = Photo.query.get_or_404(foto_id)
-    delete_photo(foto.s3_key)
-    db.session.delete(foto)
-    db.session.commit()
-    flash('Fotoğraf silindi.', 'success')
-    return redirect(request.referrer or url_for('index'))
-
-
-@app.route('/foto/teshis/<int:foto_id>', methods=['POST'])
-@login_required
-def foto_teshis(foto_id):
-    foto = Photo.query.get_or_404(foto_id)
-    image_bytes = get_bytes(foto.s3_key)
-    if not image_bytes:
-        flash('Foto indirilemedi.', 'danger')
-        return redirect(request.referrer or url_for('index'))
-    ai_text = teshis_et(image_bytes, mime=foto.mime or 'image/jpeg', user_note=foto.caption or '')
-    if ai_text:
-        foto.ai_teshis = ai_text
-        db.session.commit()
-        flash('AI teşhis yapıldı.', 'success')
-    else:
-        flash('AI teşhis alınamadı (API key / model kontrol et).', 'warning')
-    return redirect(request.referrer or url_for('index'))
-
-
-def get_photos(parent_type, parent_id):
-    """Template helper: ilgili kayda ait foto listesi (presigned URL ile)."""
-    fotos = Photo.query.filter_by(parent_type=parent_type, parent_id=parent_id)\
-        .order_by(Photo.tarih.desc()).all()
-    out = []
-    for f in fotos:
-        out.append({
-            'id': f.id,
-            'url': presigned_get(f.s3_key, 3600),
-            'mime': f.mime,
-            'caption': f.caption,
-            'ai_teshis': f.ai_teshis,
-            'tarih': f.tarih,
-            'is_image': (f.mime or '').startswith('image/'),
-        })
-    return out
-
-
-app.jinja_env.globals['get_photos'] = get_photos
 
 
 # ----- KARISIM KONTROLÜ -----
@@ -1907,13 +1448,7 @@ def baglar():
         ekim_tipi = request.form.get('ekim_tipi', '')
         gps_koordinat = request.form.get('gps_koordinat', '')
         aktif = 'aktif' in request.form  # Checkbox kontrolü
-        
-        fd = (request.form.get('fenoloji_durumu', '') or '').strip() or None
-        _ft = request.form.get('fenoloji_tarih', '').strip()
-        try:
-            ft_val = datetime.datetime.strptime(_ft, '%Y-%m-%d').date() if _ft else None
-        except ValueError:
-            ft_val = None
+
         yeni_bag = Bag(
             ad=ad,
             alan=alan,
@@ -1921,8 +1456,6 @@ def baglar():
             ekim_tipi=ekim_tipi,
             gps_koordinat=gps_koordinat,
             aktif=aktif,
-            fenoloji_durumu=fd if fd in FENOLOJI_MAP else None,
-            fenoloji_tarih=ft_val,
         )
         
         db.session.add(yeni_bag)
@@ -1942,7 +1475,7 @@ def baglar():
     else:
         baglar = Bag.query.all()
     
-    return render_template('bag.html', baglar=baglar, sadece_aktif=sadece_aktif, fenoloji_donemler=FENOLOJI_DONEMLER, fenoloji_map=FENOLOJI_MAP)
+    return render_template('bag.html', baglar=baglar, sadece_aktif=sadece_aktif)
 
 @app.route('/bag/duzenle/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -1956,13 +1489,6 @@ def bag_duzenle(id):
         bag.ekim_tipi = request.form.get('ekim_tipi', '')
         bag.gps_koordinat = request.form.get('gps_koordinat', '')
         bag.aktif = 'aktif' in request.form
-        fd = (request.form.get('fenoloji_durumu', '') or '').strip() or None
-        bag.fenoloji_durumu = fd if fd in FENOLOJI_MAP or fd is None else None
-        _ft = request.form.get('fenoloji_tarih', '').strip()
-        try:
-            bag.fenoloji_tarih = datetime.datetime.strptime(_ft, '%Y-%m-%d').date() if _ft else None
-        except ValueError:
-            pass
         bag.son_guncelleme = datetime.datetime.utcnow()
 
         db.session.commit()
@@ -1973,7 +1499,7 @@ def bag_duzenle(id):
         flash(f'{bag.ad} bağı güncellendi.', 'success')
         return redirect(url_for('baglar'))
     
-    return render_template('bag_duzenle.html', bag=bag, fenoloji_donemler=FENOLOJI_DONEMLER)
+    return render_template('bag_duzenle.html', bag=bag)
 
 @app.route('/tavsiye', methods=['GET', 'POST'])
 @login_required
@@ -2023,9 +1549,6 @@ def tavsiye():
                 hos = compute_bag_hos(b.id)
                 if hos['aktif']:
                     lines.append(f'  • HÖS AKTİF — güvenli hasat: {hos["guvenli_tarih"].strftime("%d.%m.%Y")} ({hos["kalan_gun"]} gün kaldı)')
-                fi = fenoloji_info(b)
-                if fi:
-                    lines.append(f'  • Fenolojik dönem: {fi["mevcut"]["ad"]} ({fi["mevcut"]["ay_araligi"]})')
                 # Hava
                 hv = forecast_for_bag(b)
                 if hv and hv.get('anlik'):
@@ -2049,26 +1572,6 @@ def tavsiye():
 
     aktif_baglar = Bag.query.filter_by(aktif=True).order_by(Bag.ad).all()
     return render_template('tavsiye.html', cevap=cevap, soru=soru, aktif_baglar=aktif_baglar, secili_bag=bag_id)
-
-
-@app.route('/bag/fenoloji/<int:id>', methods=['POST'])
-@login_required
-def bag_fenoloji_guncelle(id):
-    """Bağın fenolojik dönemini hızlıca güncelle (bag_detay üstünden)."""
-    bag = Bag.query.get_or_404(id)
-    fd = (request.form.get('fenoloji_durumu', '') or '').strip() or None
-    if fd and fd not in FENOLOJI_MAP:
-        flash('Geçersiz fenoloji kodu.', 'danger')
-        return redirect(url_for('bag_detay', id=id))
-    bag.fenoloji_durumu = fd
-    _ft = request.form.get('fenoloji_tarih', '').strip()
-    try:
-        bag.fenoloji_tarih = datetime.datetime.strptime(_ft, '%Y-%m-%d').date() if _ft else datetime.date.today()
-    except ValueError:
-        bag.fenoloji_tarih = datetime.date.today()
-    db.session.commit()
-    flash('Fenolojik dönem güncellendi.', 'success')
-    return redirect(url_for('bag_detay', id=id))
 
 
 @app.route('/bag/sil/<int:id>', methods=['POST'])
@@ -2133,239 +1636,17 @@ def bag_detay(id):
     # Tekrar ilaçlama önerileri (bu bağ için)
     tekrar_onerileri = compute_tekrar_onerileri(bag_id=bag.id)
 
-    # Fenolojik dönem bilgisi
-    fen_info = fenoloji_info(bag)
-
     return render_template('bag_detay.html',
                         bag=bag,
                         ilac_gruplari=ilac_gruplari_sirali,
                         gubrelemeler=gubrelemeler,
                         weather_data=weather_data,
                         hos=hos,
-                        tekrar_onerileri=tekrar_onerileri,
-                        fen_info=fen_info,
-                        fenoloji_donemler=FENOLOJI_DONEMLER)
-
-@app.route('/hasat', methods=['GET', 'POST'])
-@login_required
-def hasat():
-    """Hasat / satış kaydı listesi ve ekleme."""
-    if request.method == 'POST':
-        try:
-            bag_id = int(request.form['bag_id'])
-            miktar_kg = float(request.form['miktar_kg'])
-        except (ValueError, KeyError):
-            flash('Bağ ve miktar zorunlu.', 'danger')
-            return redirect(url_for('hasat'))
-
-        urun = request.form.get('urun', '').strip()
-        _t = request.form.get('tarih', '').strip()
-        try:
-            tarih_val = datetime.datetime.strptime(_t, '%Y-%m-%d').date() if _t else datetime.date.today()
-        except ValueError:
-            tarih_val = datetime.date.today()
-        _bf = request.form.get('birim_fiyat', '').strip()
-        try:
-            birim_fiyat = float(_bf) if _bf else None
-        except ValueError:
-            birim_fiyat = None
-        alici = request.form.get('alici', '').strip() or None
-        _st = request.form.get('satis_tarihi', '').strip()
-        try:
-            satis_tarihi = datetime.datetime.strptime(_st, '%Y-%m-%d').date() if _st else None
-        except ValueError:
-            satis_tarihi = None
-        not_bilgisi = request.form.get('not_bilgisi', '').strip() or None
-
-        # HÖS uyarısı kontrol (sadece bilgi amaçlı)
-        hos = compute_bag_hos(bag_id)
-        if hos['aktif']:
-            flash(f'UYARI: Bu parselde HÖS hâlâ aktif (güvenli: {hos["guvenli_tarih"].strftime("%d.%m.%Y")}). Hasat kaydı oluşturuldu ama kalıntı riski var.', 'warning')
-
-        yeni = Hasat(
-            bag_id=bag_id,
-            tarih=tarih_val,
-            urun=urun or None,
-            miktar_kg=miktar_kg,
-            birim_fiyat=birim_fiyat,
-            alici=alici,
-            satis_tarihi=satis_tarihi,
-            not_bilgisi=not_bilgisi,
-        )
-        db.session.add(yeni)
-        db.session.commit()
-        flash('Hasat kaydı eklendi.', 'success')
-        return redirect(url_for('hasat'))
-
-    # Liste + özet
-    kayitlar = Hasat.query.order_by(Hasat.tarih.desc()).all()
-    baglar = Bag.query.filter_by(aktif=True).order_by(Bag.ad).all()
-
-    # Parsel başına özet (kg, gelir, maliyet → kâr)
-    parsel_ozet = {}
-    for b in Bag.query.all():
-        parsel_ozet[b.id] = {
-            'bag': b, 'toplam_kg': 0, 'gelir': 0.0, 'maliyet': 0.0, 'satilmis_kg': 0,
-        }
-    for h in kayitlar:
-        if h.bag_id in parsel_ozet:
-            parsel_ozet[h.bag_id]['toplam_kg'] += h.miktar_kg
-            if h.birim_fiyat:
-                parsel_ozet[h.bag_id]['gelir'] += h.birim_fiyat * h.miktar_kg
-                parsel_ozet[h.bag_id]['satilmis_kg'] += h.miktar_kg
-
-    # Parsel maliyetleri (ilaç + gübre kullanım × birim_fiyat)
-    for k, il in db.session.query(IlacKullanim, Ilac).join(Ilac).all():
-        if k.bag_id and k.bag_id in parsel_ozet and il.birim_fiyat:
-            parsel_ozet[k.bag_id]['maliyet'] += (k.kullanilan_miktar or 0) * il.birim_fiyat
-    for k, gb in db.session.query(GubreKullanim, Gubre).join(Gubre).all():
-        if k.bag_id and k.bag_id in parsel_ozet and gb.birim_fiyat:
-            parsel_ozet[k.bag_id]['maliyet'] += (k.kullanilan_miktar or 0) * gb.birim_fiyat
-
-    for p in parsel_ozet.values():
-        p['kar'] = round(p['gelir'] - p['maliyet'], 2)
-        p['gelir'] = round(p['gelir'], 2)
-        p['maliyet'] = round(p['maliyet'], 2)
-        p['kar_donum'] = round(p['kar'] / p['bag'].alan, 2) if p['bag'].alan else 0
-
-    ozet_liste = [p for p in parsel_ozet.values() if p['toplam_kg'] > 0 or p['maliyet'] > 0]
-    ozet_liste.sort(key=lambda x: x['kar'], reverse=True)
-
-    toplam_kg = sum(h.miktar_kg for h in kayitlar)
-    toplam_gelir = round(sum((h.birim_fiyat or 0) * h.miktar_kg for h in kayitlar), 2)
-
-    return render_template('hasat.html',
-                           kayitlar=kayitlar,
-                           baglar=baglar,
-                           ozet_liste=ozet_liste,
-                           toplam_kg=toplam_kg,
-                           toplam_gelir=toplam_gelir)
-
-
-@app.route('/hasat/sil/<int:id>', methods=['POST'])
-@login_required
-def hasat_sil(id):
-    h = Hasat.query.get_or_404(id)
-    db.session.delete(h)
-    db.session.commit()
-    flash('Hasat kaydı silindi.', 'success')
-    return redirect(url_for('hasat'))
-
-
-@app.route('/kullanicilar', methods=['GET', 'POST'])
-@role_required('admin')
-def kullanicilar():
-    """Kullanıcı listesi + ekleme (admin)."""
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        sifre = request.form.get('sifre', '').strip()
-        ad_soyad = request.form.get('ad_soyad', '').strip() or None
-        rol = request.form.get('rol', 'isci')
-        if not username or not sifre:
-            flash('Kullanıcı adı ve şifre zorunlu.', 'danger')
-            return redirect(url_for('kullanicilar'))
-        if User.query.filter_by(username=username).first():
-            flash('Bu kullanıcı adı zaten var.', 'warning')
-            return redirect(url_for('kullanicilar'))
-        if rol not in ('admin', 'usta', 'isci'):
-            rol = 'isci'
-        u = User(
-            username=username,
-            password_hash=generate_password_hash(sifre),
-            ad_soyad=ad_soyad,
-            rol=rol,
-            aktif=True,
-        )
-        db.session.add(u)
-        log_audit('user_ekle', resource=f'user:{username}', details=f'rol={rol}')
-        db.session.commit()
-        flash(f'{username} kullanıcısı eklendi.', 'success')
-        return redirect(url_for('kullanicilar'))
-
-    users = User.query.order_by(User.username).all()
-    return render_template('kullanicilar.html', users=users)
-
-
-@app.route('/kullanici/toggle/<int:id>', methods=['POST'])
-@role_required('admin')
-def kullanici_toggle(id):
-    u = User.query.get_or_404(id)
-    u.aktif = not u.aktif
-    log_audit('user_toggle', resource=f'user:{u.username}', details=f'aktif={u.aktif}')
-    db.session.commit()
-    flash(f'{u.username} {"aktif" if u.aktif else "pasif"}.', 'success')
-    return redirect(url_for('kullanicilar'))
-
-
-@app.route('/kullanici/sifre/<int:id>', methods=['POST'])
-@role_required('admin')
-def kullanici_sifre_degistir(id):
-    u = User.query.get_or_404(id)
-    yeni = request.form.get('yeni_sifre', '').strip()
-    if len(yeni) < 4:
-        flash('Şifre en az 4 karakter olmalı.', 'warning')
-        return redirect(url_for('kullanicilar'))
-    u.password_hash = generate_password_hash(yeni)
-    log_audit('user_sifre_sifirla', resource=f'user:{u.username}')
-    db.session.commit()
-    flash(f'{u.username} şifresi güncellendi.', 'success')
-    return redirect(url_for('kullanicilar'))
-
-
-@app.route('/audit')
-@role_required('admin')
-def audit():
-    """Audit log listesi."""
-    sayfa = int(request.args.get('sayfa', 1))
-    per = 100
-    q = AuditLog.query.order_by(AuditLog.tarih.desc())
-    toplam = q.count()
-    kayitlar = q.offset((sayfa - 1) * per).limit(per).all()
-    toplam_sayfa = (toplam + per - 1) // per
-    return render_template('audit.html', kayitlar=kayitlar, sayfa=sayfa, toplam_sayfa=toplam_sayfa, toplam=toplam)
-
+                        tekrar_onerileri=tekrar_onerileri)
 
 @app.route('/offline')
 def offline():
     return render_template('offline.html')
-
-
-@app.route('/hizli-kayit')
-@login_required
-def hizli_kayit():
-    ilaclar = Ilac.query.order_by(Ilac.ad).all()
-    baglar = Bag.query.filter_by(aktif=True).order_by(Bag.ad).all()
-    return render_template('hizli_kayit.html', ilaclar=ilaclar, baglar=baglar)
-
-
-@app.route('/api/kod-eslesme')
-@login_required
-def kod_eslesme():
-    """QR/barkod kodunu ilaç adı, etken maddesi veya lot_no ile eşleştir."""
-    kod = request.args.get('kod', '').strip()
-    if not kod:
-        return jsonify({'ilac': None, 'gubre': None})
-    k_lower = kod.lower()
-    # İlaç: ad, etken_madde, lot_no
-    i = (Ilac.query
-         .filter(db.or_(
-             db.func.lower(Ilac.ad).contains(k_lower),
-             db.func.lower(Ilac.etken_madde).contains(k_lower),
-             db.func.lower(Ilac.lot_no) == k_lower,
-         ))
-         .first())
-    g = None
-    if not i:
-        g = (Gubre.query
-             .filter(db.or_(
-                 db.func.lower(Gubre.ad).contains(k_lower),
-                 db.func.lower(Gubre.lot_no) == k_lower,
-             ))
-             .first())
-    return jsonify({
-        'ilac': {'id': i.id, 'ad': i.ad, 'miktar': i.miktar, 'birim': i.birim} if i else None,
-        'gubre': {'id': g.id, 'ad': g.ad, 'miktar': g.miktar, 'birim': g.birim} if g else None,
-    })
 
 
 @app.route('/sw.js')
@@ -2383,100 +1664,6 @@ def web_manifest():
     resp = make_response(send_from_directory(app.static_folder, 'manifest.json'))
     resp.headers['Content-Type'] = 'application/manifest+json'
     return resp
-
-
-@app.route('/iscilik', methods=['GET', 'POST'])
-@login_required
-def iscilik():
-    """İşçi / yevmiye takibi."""
-    if request.method == 'POST':
-        isci_adi = request.form.get('isci_adi', '').strip()
-        if not isci_adi:
-            flash('İşçi adı zorunlu.', 'danger')
-            return redirect(url_for('iscilik'))
-        try:
-            yevmiye = float(request.form['yevmiye'])
-        except (ValueError, KeyError):
-            flash('Yevmiye zorunlu.', 'danger')
-            return redirect(url_for('iscilik'))
-
-        bag_id_str = request.form.get('bag_id', '').strip()
-        try:
-            bag_id = int(bag_id_str) if bag_id_str else None
-        except ValueError:
-            bag_id = None
-
-        _t = request.form.get('tarih', '').strip()
-        try:
-            tarih_val = datetime.datetime.strptime(_t, '%Y-%m-%d').date() if _t else datetime.date.today()
-        except ValueError:
-            tarih_val = datetime.date.today()
-
-        _s = request.form.get('saat', '').strip()
-        try:
-            saat = float(_s) if _s else None
-        except ValueError:
-            saat = None
-
-        yeni = IscilikKayit(
-            bag_id=bag_id,
-            tarih=tarih_val,
-            isci_adi=isci_adi,
-            is_turu=request.form.get('is_turu', '').strip() or None,
-            saat=saat,
-            yevmiye=yevmiye,
-            odendi='odendi' in request.form,
-            not_bilgisi=request.form.get('not_bilgisi', '').strip() or None,
-        )
-        db.session.add(yeni)
-        db.session.commit()
-        flash('İşçilik kaydı eklendi.', 'success')
-        return redirect(url_for('iscilik'))
-
-    kayitlar = IscilikKayit.query.order_by(IscilikKayit.tarih.desc()).all()
-    baglar = Bag.query.filter_by(aktif=True).order_by(Bag.ad).all()
-
-    # İşçi başına toplam
-    isci_ozet = {}
-    for k in kayitlar:
-        if k.isci_adi not in isci_ozet:
-            isci_ozet[k.isci_adi] = {'toplam': 0, 'odendi': 0, 'bekliyor': 0, 'gun': 0}
-        isci_ozet[k.isci_adi]['toplam'] += k.yevmiye or 0
-        isci_ozet[k.isci_adi]['gun'] += 1
-        if k.odendi:
-            isci_ozet[k.isci_adi]['odendi'] += k.yevmiye or 0
-        else:
-            isci_ozet[k.isci_adi]['bekliyor'] += k.yevmiye or 0
-
-    toplam_tutar = round(sum(k.yevmiye or 0 for k in kayitlar), 2)
-    bekleyen_tutar = round(sum((k.yevmiye or 0) for k in kayitlar if not k.odendi), 2)
-
-    return render_template('iscilik.html',
-                           kayitlar=kayitlar,
-                           baglar=baglar,
-                           isci_ozet=isci_ozet,
-                           toplam_tutar=toplam_tutar,
-                           bekleyen_tutar=bekleyen_tutar)
-
-
-@app.route('/iscilik/odendi/<int:id>', methods=['POST'])
-@login_required
-def iscilik_odendi(id):
-    k = IscilikKayit.query.get_or_404(id)
-    k.odendi = not k.odendi
-    db.session.commit()
-    flash('Durum güncellendi.', 'success')
-    return redirect(url_for('iscilik'))
-
-
-@app.route('/iscilik/sil/<int:id>', methods=['POST'])
-@login_required
-def iscilik_sil(id):
-    k = IscilikKayit.query.get_or_404(id)
-    db.session.delete(k)
-    db.session.commit()
-    flash('Kayıt silindi.', 'success')
-    return redirect(url_for('iscilik'))
 
 
 @app.route('/yedekleme')
