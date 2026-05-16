@@ -120,8 +120,8 @@ class Bag(db.Model):
 class Ilac(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ad = db.Column(db.String(100), nullable=False)
-    etken_madde = db.Column(db.String(100))
-    hedef_hastalik = db.Column(db.String(100))
+    etken_madde = db.Column(db.Text)
+    hedef_hastalik = db.Column(db.Text)
     miktar = db.Column(db.Float, nullable=False)  # Toplam stok miktarı
     birim = db.Column(db.String(20), nullable=False)  # Stok birimi (ml, lt, gr, kg)
     dozaj = db.Column(db.String(200))  # Doz açıklaması (ör: 20 ml/100 L su)
@@ -133,18 +133,103 @@ class Ilac(db.Model):
     min_stok = db.Column(db.Float, default=100)  # Kritik stok seviyesi (ml/mg)
     ambalaj_miktari = db.Column(db.Float)  # Bir ambalajdaki miktar
     ambalaj_birimi = db.Column(db.String(20))  # Ambalaj birimi (ml, lt, gr, kg)
-    son_kullanma_tarihi = db.Column(db.Date)  # SKT
-    lot_no = db.Column(db.String(60))  # Parti / lot numarası
-    acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
     tekrar_araligi_gun = db.Column(db.Integer)  # Tekrar ilaçlama aralığı (gün) — ör. mildiyö için 7-10
+    ruhsatsiz = db.Column(db.Boolean, default=False, nullable=False)  # BKÜ'de bağ ruhsatı yok — sadece stok takibi
+    etiket_foto = db.Column(db.String(255))  # /static/etiketler/<id>.jpg — kutu etiket fotosu
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     def __repr__(self):
         return f"<Ilac {self.ad}>"
-    
+
     def kritik_seviyede_mi(self):
         """Stok kritik seviyenin altında mı?"""
         return self.miktar < self.min_stok if self.min_stok else False
+
+    def etken_listesi(self):
+        """etken_madde stringini parse eder, [(isim, slug), ...] döndürür.
+
+        Örn: '%66,7 Fosetyl-Al + %4,44 Fluopicolide'
+          -> [('Fosetyl-Al', 'fosetyl-al'), ('Fluopicolide', 'fluopicolide')]
+        """
+        from utils.etken import parse_etken
+        return parse_etken(self.etken_madde or '')
+
+
+# Etken Madde bilgi sayfası — BKÜ + V2 rehber seed
+class EtkenMadde(db.Model):
+    slug = db.Column(db.String(80), primary_key=True)
+    isim = db.Column(db.String(120), nullable=False)
+    grup = db.Column(db.String(80))                      # Fungisit, İnsektisit, Herbisit, Akarisit
+    frac_irac_kod = db.Column(db.String(50))             # FRAC 7, IRAC 28, HRAC B/2
+    hedef_zararli = db.Column(db.Text)                   # külleme, mildiyö
+    doz_aciklama = db.Column(db.Text)                    # 100 lt suya doz, dönüm dozu
+    phi_gun = db.Column(db.Integer)                      # hasat öncesi süre (gün)
+    ari_toksisite = db.Column(db.String(120))            # zararlı / dikkatli / güvenli
+    re_entry_saat = db.Column(db.Integer)                # bahçeye girme süresi
+    not_bilgisi = db.Column(db.Text)                     # ek uyarı, ipucu
+    bku_url = db.Column(db.String(255))                  # BKÜ aktif madde grup linki
+    kaynak = db.Column(db.String(40), default='manuel')  # 'manuel' | 'rehber-v2' | 'etiket'
+    kaynak_tarih = db.Column(db.Date)
+    # V2 rehber alanları
+    etki_mekanizmasi = db.Column(db.Text)                # "Hedef nasıl ölüyor" — enzim, ölüm türü
+    bitki_hareketi = db.Column(db.String(40))            # sistemik | kontak | translaminer | yarı-sistemik
+    koruyucu_tedavi = db.Column(db.String(80))           # Koruyucu | Tedavi | Hem koruyucu hem tedavi
+    koruma_suresi = db.Column(db.Text)                   # 10-14 gün, 2 saatte yağmura dayanır
+    mahsul_listesi = db.Column(db.Text)                  # Buğday, üzüm, domates (virgül)
+    direnc_durumu = db.Column(db.String(40))             # düşük | orta | yüksek | çok yüksek
+    ciftci_notu = db.Column(db.Text)                     # Pratik notlar (multi-line)
+    yasakli = db.Column(db.Boolean, default=False)
+    yasak_tarihleri = db.Column(db.String(200))          # ithalat/imalat/kullanım sonlandırma
+    formulasyon_sayisi = db.Column(db.Integer, default=0)
+    rehber_metni = db.Column(db.Text)                    # V2 rehber govdesi (tam markdown)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    son_guncelleme = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<EtkenMadde {self.isim}>"
+
+    def iliskili_ilaclar(self):
+        """Bu aktif maddeyi içeren envanterdeki ilaçları döndürür."""
+        sonuc = []
+        for il in Ilac.query.all():
+            for _, s in il.etken_listesi():
+                if s == self.slug:
+                    sonuc.append(il)
+                    break
+        return sonuc
+
+
+# Formülasyon — BKÜ veri tabanından alınan ürün kaydı (örn. "100 G/L CLOPYRALID")
+class Formulasyon(db.Model):
+    __tablename__ = 'formulasyon'
+    id = db.Column(db.Integer, primary_key=True)              # BKÜ ID
+    ad = db.Column(db.String(300), nullable=False, unique=True, index=True)
+    tip = db.Column(db.String(20))                            # Sıvı | Toz/granül
+    bku_url = db.Column(db.String(255))                       # BKÜ etiket linki
+    durum = db.Column(db.String(20), default='RUHSATLI')      # RUHSATLI | YASAKLI
+
+    etken_maddeler = db.relationship(
+        'EtkenMadde',
+        secondary='formulasyon_etken_madde',
+        backref='formulasyonlar'
+    )
+
+    def __repr__(self):
+        return f"<Formulasyon {self.ad}>"
+
+    def envanterdeki_ilaclar(self):
+        """Bu formülasyonu içeren envanterdeki ilaçları döndürür (ad alanı tam eşleşir)."""
+        return Ilac.query.filter(Ilac.etken_madde == self.ad).all()
+
+
+# Formülasyon ↔ Aktif madde join (M-N, kombo formülasyonlar için)
+class FormulasyonEtkenMadde(db.Model):
+    __tablename__ = 'formulasyon_etken_madde'
+    formulasyon_id = db.Column(db.Integer,
+                               db.ForeignKey('formulasyon.id'), primary_key=True)
+    etken_madde_slug = db.Column(db.String(80),
+                                  db.ForeignKey('etken_madde.slug'), primary_key=True)
+    konsantrasyon_payi = db.Column(db.String(40))             # 100 G/L | %66.7
 
 # Gübre modeli
 class Gubre(db.Model):
@@ -159,9 +244,6 @@ class Gubre(db.Model):
     yaprak_dozu = db.Column(db.Float)  # Yaprak dozu: ml/100lt su
     kategori = db.Column(db.String(50))
     not_bilgisi = db.Column(db.Text)
-    son_kullanma_tarihi = db.Column(db.Date)  # SKT
-    lot_no = db.Column(db.String(60))  # Parti / lot numarası
-    acilma_tarihi = db.Column(db.Date)  # Ambalaj açılma tarihi
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     def __repr__(self):
@@ -257,6 +339,98 @@ class StokHareket(db.Model):
 
     def __repr__(self):
         return f"<StokHareket {self.urun_type}:{self.urun_id} {self.tip} {self.miktar}>"
+
+
+# Tank (1 doluş = 1 tank kaydı)
+class Tank(db.Model):
+    __tablename__ = 'tank'
+    id = db.Column(db.Integer, primary_key=True)
+    toplam_su = db.Column(db.Float, nullable=False)              # toplam su (ilk + sonradan eklenen)
+    kalan_su = db.Column(db.Float)                                # canlı: tank içinde şu an kalan
+    aciklama = db.Column(db.Text)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    tamamlandi = db.Column(db.Boolean, default=False)
+
+    ilaclar = db.relationship('TankIlac', backref='tank',
+                              cascade='all, delete-orphan')
+    atimlar = db.relationship('TankBagKullanim', backref='tank',
+                              cascade='all, delete-orphan',
+                              order_by='TankBagKullanim.tarih')
+    su_eklemeler = db.relationship('TankSuEkleme', backref='tank',
+                                   cascade='all, delete-orphan',
+                                   order_by='TankSuEkleme.tarih')
+
+    def __repr__(self):
+        return f"<Tank #{self.id} {self.toplam_su}L kalan={self.kalan_su}>"
+
+    def harcanan_su(self):
+        return sum(float(a.su_miktari or 0) for a in self.atimlar)
+
+    def eklenen_su(self):
+        return sum(float(s.miktar or 0) for s in self.su_eklemeler)
+
+    def hesaplanan_kalan(self):
+        if self.kalan_su is not None:
+            return float(self.kalan_su)
+        return float(self.toplam_su) - self.harcanan_su()
+
+
+# Tank içindeki ilaç — canlı: tankta o an mevcut ilaç miktarı
+class TankIlac(db.Model):
+    __tablename__ = 'tank_ilac'
+    id = db.Column(db.Integer, primary_key=True)
+    tank_id = db.Column(db.Integer, db.ForeignKey('tank.id'), nullable=False)
+    ilac_id = db.Column(db.Integer, db.ForeignKey('ilac.id'), nullable=False)
+    kullanilan_miktar = db.Column(db.Float, nullable=False)       # canlı: tankta kalan (ml/gr)
+
+    ilac = db.relationship('Ilac')
+
+    def __repr__(self):
+        return f"<TankIlac tank={self.tank_id} ilac={self.ilac_id} {self.kullanilan_miktar}>"
+
+
+# Bir tanktan bir bağa atım — ilac_paylari snapshot olarak saklanır
+class TankBagKullanim(db.Model):
+    __tablename__ = 'tank_bag_kullanim'
+    id = db.Column(db.Integer, primary_key=True)
+    tank_id = db.Column(db.Integer, db.ForeignKey('tank.id'), nullable=False)
+    bag_id = db.Column(db.Integer, db.ForeignKey('bag.id'), nullable=False)
+    su_miktari = db.Column(db.Float, nullable=False)
+    ilac_paylari_json = db.Column('ilac_paylari', db.JSON)        # snapshot: [{ilac_id, ilac_ad, miktar, birim}]
+    notlar = db.Column(db.Text)
+    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    bag = db.relationship('Bag')
+
+    def __repr__(self):
+        return f"<TankBagKullanim tank={self.tank_id} bag={self.bag_id} {self.su_miktari}L>"
+
+    def ilac_paylari(self):
+        """Snapshot'ı döndür. Yoksa runtime hesap (legacy)."""
+        if self.ilac_paylari_json:
+            return self.ilac_paylari_json
+        if not self.tank or not float(self.tank.toplam_su or 0):
+            return []
+        oran = float(self.su_miktari) / float(self.tank.toplam_su)
+        return [{
+            'ilac_ad': ti.ilac.ad if ti.ilac else '?',
+            'miktar': float(ti.kullanilan_miktar) * oran,
+            'birim': ti.ilac.birim if ti.ilac else '',
+        } for ti in self.tank.ilaclar]
+
+
+# Tank içine sonradan su+orantılı ilaç ekleme
+class TankSuEkleme(db.Model):
+    __tablename__ = 'tank_su_ekleme'
+    id = db.Column(db.Integer, primary_key=True)
+    tank_id = db.Column(db.Integer, db.ForeignKey('tank.id'), nullable=False)
+    miktar = db.Column(db.Float, nullable=False)                  # eklenen su (L)
+    ilac_paylari_json = db.Column('ilac_paylari', db.JSON)        # eklemeyle giren ilaç snapshot
+    notlar = db.Column(db.Text)
+    tarih = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<TankSuEkleme tank={self.tank_id} +{self.miktar}L>"
 
 
 # Gübre Kullanım Kaydı
